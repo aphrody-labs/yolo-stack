@@ -1,6 +1,6 @@
 # ADR 0002 : Dioxus retenu comme framework UI
 
-- **Statut** : Proposé, en attente du benchmark
+- **Statut** : Accepté, périmètre natif (desktop, mobile, Blitz) ; le site SEO est tranché par l'ADR 0003 en faveur de Leptos
 - **Date** : 2026-11-04
 - **Décideurs** : aphrody-dev, agent de recherche (benchmark), agent de scaffolding
 - **Pilier(s) concerné(s)** : yolo-ui, apps/shenron

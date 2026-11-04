@@ -1,10 +1,10 @@
 # Decision record: the yolo web stack
 
-Date: 2026-11-04. Status: accepted. Inputs: `docs/BENCHMARKS.md`, `C:/src/yolo-ui/AGENTS.md`,
+Date: 2026-11-04. Status: superseded by docs/decisions/0003-verdict-leptos-dioxus-tanstack.md (2026-11-05). Inputs: `docs/BENCHMARKS.md`, `C:/src/yolo-ui/AGENTS.md`,
 `C:/src/bun-ui/packages/bun-next/{README.md,docs/PLAN.md}`, YOLO policy (100 percent Bun, Rust-first,
 Dioxus 0.8 RSX or typed TSX, no Node).
 
-## Decision
+## Decision (superseded: see docs/decisions/0003-verdict-leptos-dioxus-tanstack.md for the reconciled layers: Leptos SEO site, Dioxus native, @yolo-rs/fullstack interim bridge only, TanStack libraries only)
 
 Primary stack: TanStack Router + Query + Start on Bun's native fullstack server (`Bun.build` +
 `Bun.serve`, React 19), with `@yolo-rs/fullstack` as the RSC and Next.js migration engine.
