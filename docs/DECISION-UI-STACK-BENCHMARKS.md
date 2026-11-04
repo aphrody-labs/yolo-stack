@@ -1,5 +1,7 @@
 # Décision moteur UI/fullstack Yolo : Dioxus vs Leptos vs TanStack
 
+Statut (2026-11-05) : référence chiffrée. Le périmètre du verdict « Dioxus moteur principal » est restreint au natif par l'ADR `docs/decisions/0003-verdict-leptos-dioxus-tanstack.md` (site SEO Shenron : Leptos 0.8 SSR statique ; natif : Dioxus ; TanStack : bibliothèques Bun seulement). L'outil de migration `crates/yolo-next` + `packages/yolo-next` émet les trois lanes et sert de banc de parité ; il n'est pas une cible de production.
+
 Date d'arbitrage : 2026-11-04. Périmètre : moteur principal du framework fullstack Rust + Bun v1.4.4 de `yolo-stack` remplaçant Next.js (App Router, Server Components, Server Actions, streaming SSR, `next.config`, `next/font`, `next/image` + CDN, Turbopack). Doctrine : Bun >= 1.4.4 et Rust purs, zéro Node/npm/Vite/webpack. Tout chiffre est daté et sourcé ; `UNVERIFIED` marque ce qui n'a pas pu être confirmé.
 
 ## 1. Verdict

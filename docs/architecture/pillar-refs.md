@@ -3,7 +3,7 @@
 | Pilier | Dépôt | Branches auditées | Commande |
 |---|---|---|---|
 | yolo-ui | https://github.com/yolo-rs/yolo-ui.git | main uniquement (secrets dans le working tree, codex/claude non poussées) | `just merge-pillar yolo-ui https://github.com/yolo-rs/yolo-ui.git main` |
-| yolo-web | https://github.com/yolo-rs/yolo-web.git | main uniquement | `just merge-pillar yolo-web https://github.com/yolo-rs/yolo-web.git main` |
+| yolo-web | https://github.com/yolo-rs/yolo-web.git | main uniquement ; fusionner depuis 6416f380 ou plus récent (renommage yolo-web-standards fait, shell yolo-chromium CEF 156) ; cargo check --workspace encore rouge sur servo-url/servo-timers/servo-xpath (correctif annoncé) | `just merge-pillar yolo-web https://github.com/yolo-rs/yolo-web.git main` |
 | yolo-bun | https://github.com/yolo-rs/yolo-bun.git | main, codex, claude | `just merge-pillar yolo-bun https://github.com/yolo-rs/yolo-bun.git main` |
 | yolo-standards | https://github.com/yolo-rs/yolo-standards.git | main, codex, claude | idem |
 | yolo-plugins | https://github.com/yolo-rs/yolo-plugins.git | main, codex, claude ; purge des clés Ed25519 préalable | idem après purge |

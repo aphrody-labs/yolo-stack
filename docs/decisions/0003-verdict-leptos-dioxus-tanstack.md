@@ -72,8 +72,8 @@ en Rust + Bun, sans Next.js, Tailwind, Base UI ni shadcn ; WebGPU/wgpu réel ; T
   pointer `origin/main` seulement.
 - yolo-plugins versionne 7 clés privées Ed25519 (`**/.keys/ed25519.key`) : régénérer et purger
   l'historique (`git filter-repo`) avant tout passage public.
-- yolo-web : renommage `crates/yolo-standards` -> `yolo-web-standards` à faire côté yolo-web dans un
-  commit dédié (collision avec le pilier yolo-standards) ; ne pas le faire deux fois.
+- yolo-web : renommage `crates/yolo-standards` -> `yolo-web-standards` fait sur origin/main 6416f380 (2026-11-05) ; fusionner depuis ce
+  commit ou plus récent.
 
 ## Couche transitoire (réconciliation avec `docs/DECISION.md`, session yolo-bun, 2026-11-05)
 
