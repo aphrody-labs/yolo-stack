@@ -5,7 +5,9 @@
     "": {
       "name": "@yolo-rs/yolo-stack",
       "devDependencies": {
-        "@types/bun": "^1.4.4",
+        "@types/bun": "1.4.4",
+        "bun-types": "1.4.4",
+        "typescript": "5.9.3",
       },
     },
     "apps/showcase-tanstack": {
@@ -46,6 +48,10 @@
         "react": ">=19.0.0",
         "react-dom": ">=19.0.0",
       },
+    },
+    "pillars/yolo-bun/packages/yolo-bun-tools": {
+      "name": "@yolo-rs/bun-tools",
+      "version": "0.1.0",
     },
   },
   "packages": {
@@ -144,6 +150,8 @@
     "@types/bun": ["@types/bun@1.4.4", "", { "dependencies": { "bun-types": "1.4.4" } }, "sha512-9wkRDXUXK124pEnAutE6n/l18j+i9GC5IAHK8TmX/2nlySETmky0OU6yL5U8pW1AoKh++AN9auDCr647BfurjQ=="],
 
     "@types/node": ["@types/node@26.6.6", "", { "dependencies": { "undici-types": "~8.9.0" } }, "sha512-MzQj+8Kx3XI40OmUAE6Qoh58ZMNstNNMwn2nfd3qWsfe7nDNSqJNzes4njhz6AHwrSHOffSLwXU6yb474Q4aog=="],
+
+    "@yolo-rs/bun-tools": ["@yolo-rs/bun-tools@workspace:pillars/yolo-bun/packages/yolo-bun-tools"],
 
     "@yolo-rs/showcase-tanstack": ["@yolo-rs/showcase-tanstack@workspace:apps/showcase-tanstack"],
 
@@ -264,6 +272,8 @@
     "srvx": ["srvx@1.0.8", "", { "bin": { "srvx": "./bin/srvx.mjs" } }, "sha512-ngFS/J6St4PJfHRHGjr78xkPPtbyXtdMOLNE4x/XZunEK3OhV7aGUWMHf9WTUEy6wm1U0W4okkd82ZFFWRVQTw=="],
 
     "tinyglobby": ["tinyglobby@0.2.17", "", { "dependencies": { "fdir": "^6.5.0", "picomatch": "^4.0.4" } }, "sha512-wXR/dYpcqKmfWpEdZjiKJOwCNFndD0DMnrW/cYjVGttEkBfVgcLFHoNrlj47mjOVic9yyNu65alsgF4NQyTa2g=="],
+
+    "typescript": ["typescript@5.9.3", "", { "bin": { "tsc": "bin/tsc", "tsserver": "bin/tsserver" } }, "sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw=="],
 
     "ufo": ["ufo@1.6.4", "", {}, "sha512-JFNbkD1Svwe0KvGi8GOeLcP4kAWQ609twvCdcHxq1oSL8svv39ZuSvajcD8B+5D0eL4+s1Is2D/O6KN3qcTeRA=="],
 

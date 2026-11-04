@@ -1,0 +1,155 @@
+{
+  "decided_at": "2026-11-04T22:45:00Z",
+  "primary": "dioxus",
+  "lanes": [
+    {
+      "id": "rust-dioxus",
+      "role": "primary",
+      "stack": [
+        "dioxus 0.8.0-alpha.3 (fork aplati yolo-ui)",
+        "dioxus-fullstack / axum",
+        "dioxus-router",
+        "manganis",
+        "subsecond",
+        "blitz 0.3.0-beta.4",
+        "taffy 0.15.1"
+      ],
+      "targets": ["web", "desktop", "mobile", "native"]
+    },
+    {
+      "id": "bun-tanstack-rsc",
+      "role": "secondary",
+      "stack": [
+        "@tanstack/react-router 1.170.46",
+        "@tanstack/react-query 5.106.0",
+        "@tanstack/react-table 9.3.1",
+        "@tanstack/react-form 1.33.5",
+        "@tanstack/react-virtual 3.14.26",
+        "@tanstack/react-db 1.0.0-rc.1.3",
+        "@tanstack/router-generator 1.167.46",
+        "@yolo-rs/fullstack (react-server-dom-parcel + Bun.build + Bun.serve)",
+        "yolo-react (encodeur RSC Flight Rust + analyseur OXC)"
+      ],
+      "targets": ["web"],
+      "excluded": ["@tanstack/react-start (Vite/Rsbuild/Nitro obligatoires)", "Vite", "Node"]
+    },
+    {
+      "id": "leptos-reference",
+      "role": "reference-only",
+      "stack": ["modes SSR (out-of-order, in-order, partially-blocked)", "islands", "StaticRoute::regenerate"],
+      "note": "aucun code Leptos dans le runtime ; challenger de réévaluation si Dioxus 0.8 stable absent au 2027-03-31"
+    }
+  ],
+  "weights": {
+    "performance_runtime": 20,
+    "ssr_fullstack_next_parity": 25,
+    "dx_iteration_speed": 15,
+    "ecosystem_health": 15,
+    "bun_rust_integration": 15,
+    "risk": 10
+  },
+  "scores": {
+    "dioxus": {
+      "performance_runtime": 6.5,
+      "ssr_fullstack_next_parity": 7.5,
+      "dx_iteration_speed": 8.5,
+      "ecosystem_health": 7.5,
+      "bun_rust_integration": 9.0,
+      "risk": 6.0,
+      "total": 75.25
+    },
+    "leptos": {
+      "performance_runtime": 8.0,
+      "ssr_fullstack_next_parity": 8.5,
+      "dx_iteration_speed": 6.0,
+      "ecosystem_health": 6.5,
+      "bun_rust_integration": 7.0,
+      "risk": 6.0,
+      "total": 72.5
+    },
+    "tanstack": {
+      "performance_runtime": 5.5,
+      "ssr_fullstack_next_parity": 6.0,
+      "dx_iteration_speed": 9.0,
+      "ecosystem_health": 9.5,
+      "bun_rust_integration": 6.5,
+      "risk": 6.5,
+      "total": 70.0
+    }
+  },
+  "scoring_note": "barème 0-10 par critère, total = somme(score x poids) / 10 ; marge Dioxus-Leptos 2,75 points ; bascule vers Leptos uniquement si Dioxus perd simultanément 0,5 en performance et 0,5 en intégration au profit de Leptos",
+  "evidence": [
+    { "claim": "Table officielle krausest la plus récente", "value": "Chrome 156 (release chrome156 du 2026-10-25) ; pages 2026 rendues en JavaScript", "source": "https://krausest.github.io/js-framework-benchmark/index.html", "observed": "2026-11-04" },
+    { "claim": "Données brutes utilisées pour le recalcul", "value": "webdriver-ts-results/src/results.ts, commit 2026-11-02 'incremental run' ; séries leptos/dioxus/react-hooks identiques au bundle Chrome 156", "source": "https://raw.githubusercontent.com/krausest/js-framework-benchmark/master/webdriver-ts-results/src/results.ts", "observed": "2026-11-04" },
+    { "claim": "Formule officielle (moyenne géométrique pondérée CPU, 9 poids, facteur vs médiane la plus rapide)", "value": "poids CPU [0.6428, 0.5607, 0.5644, 0.1926, 0.1320, 0.5277, 0.5644, 0.5508, 0.4226]", "source": "https://raw.githubusercontent.com/krausest/js-framework-benchmark/master/webdriver-ts-results/src/Common.ts", "observed": "2026-11-04" },
+    { "claim": "krausest durée (géom. pondérée, keyed)", "value": "vanillajs 1.02 ; solid 1.14 ; dioxus 0.7.2 1.30 ; sycamore 0.9.0-beta.2 1.31 ; leptos 0.7.0 1.32 ; react-hooks 19.2.0 1.56", "source": "https://krausest.github.io/js-framework-benchmark/2026/chrome156.html", "observed": "2026-11-04 (données 2026-11-02)" },
+    { "claim": "krausest mémoire (géom.)", "value": "vanillajs 1.06 ; sycamore 1.24 ; solid 1.29 ; leptos 1.46 ; dioxus 1.83 ; react-hooks 2.64", "source": "https://krausest.github.io/js-framework-benchmark/2026/chrome156.html", "observed": "2026-11-04 (données 2026-11-02)" },
+    { "claim": "krausest taille + first paint (géom.) et valeurs absolues", "value": "dioxus 57.75 (419.6 KB brut / 114.9 KB gzip / 536.9 ms) ; leptos 25.34 (189.6 / 48.8 / 236.4) ; react-hooks 25.51 (190.3 / 51.4 / 228.1) ; sycamore 22.84 (157.5 / 47.2 / 215.3) ; solid 2.74 (11.5 / 4.5 / 53.5) ; vanillajs 2.07 (11.3 / 2.5 / 42.1)", "source": "https://krausest.github.io/js-framework-benchmark/2026/chrome156.html", "observed": "2026-11-04 (données 2026-11-02)" },
+    { "claim": "Catégorie startup historique absente", "value": "benchmarks présents : 01-09 CPU, 21/22/25 mémoire, 41/42/43 taille et first paint", "source": "https://raw.githubusercontent.com/krausest/js-framework-benchmark/master/webdriver-ts-results/src/results.ts", "observed": "2026-11-04" },
+    { "claim": "Dioxus hello world web (affirmation projet)", "value": "about 50kb, comparable to React ; Portable <3mb binaries", "source": "https://github.com/DioxusLabs/dioxus", "observed": "2026-11-04" },
+    { "claim": "Leptos islands tailles WASM", "value": "24kb (islands) vs 274kb (non-islands) non compressé ; 166kb avec une island ; démo tabs about 200kb vs over 400kb", "source": "https://book.leptos.dev/islands.html", "observed": "2026-11-04" },
+    { "claim": "Comparaison tierce non reproductible (gzip, release)", "value": "Dioxus 210 KB, Yew 180 KB, Leptos 86 KB", "source": "https://www.pistack.xyz/posts/2026-08-29-dioxus-vs-yew-vs-leptos-rust-wasm-frameworks-comparison/", "observed": "2026-11-04 (publié 2026-08-29)" },
+    { "claim": "Subsecond plateformes et limites", "value": "Android, iOS (simulateur), Linux, macOS, Windows x86_64/arm64, wasm32 ; ThinLink < 500 ms incrémental ; pas de hot-reload de structs ; --hotpatch requis en 0.7", "source": "https://docs.rs/subsecond/latest/subsecond/", "observed": "2026-11-04" },
+    { "claim": "Hotpatch par défaut en 0.8", "value": "PR #5506 'hotpatch-by-default' dans v0.8.0-alpha.0 (2026-05-19)", "source": "https://github.com/DioxusLabs/dioxus/releases/tag/v0.8.0-alpha.0", "observed": "2026-11-04" },
+    { "claim": "cargo-leptos hot reload", "value": "patch des macros view! (leptos_hot_reload), CSS hot-reload ; 'hot reloading does not currently work in --release mode'", "source": "https://docs.rs/crate/cargo-leptos/0.2.47/source/src/command/watch.rs", "observed": "2026-11-04" },
+    { "claim": "Leptos 0.8.0 compile times", "value": "'Significant improvements to compile times' avec --cfg=erase_components, aucun chiffre ; publié 2025-05-01", "source": "https://github.com/leptos-rs/leptos/releases/tag/v0.8.0", "observed": "2026-11-04" },
+    { "claim": "Dioxus streaming", "value": "désactivé par défaut ; enable_out_of_order_streaming ; contenu streamé invisible sans JavaScript ; head uniquement dans le premier chunk", "source": "https://dioxuslabs.com/learn/0.7/essentials/fullstack/streaming", "observed": "2026-11-04" },
+    { "claim": "Dioxus SSG", "value": "dx bundle --web --ssg ; server fn 'static_routes' ; IncrementalRendererConfig static_dir / clear_cache", "source": "https://dioxuslabs.com/learn/0.7/essentials/fullstack/static_site_generation", "observed": "2026-11-04" },
+    { "claim": "Dioxus ISR dans le fork local", "value": "IncrementalRendererConfig::invalidate_after(Duration), static_dir, clear_cache, map_path", "source": "C:\\src\\yolo-ui\\packages\\fullstack-server\\src\\isrg\\config.rs", "observed": "2026-11-04" },
+    { "claim": "Dioxus layouts", "value": "#[layout(Wrapper)], #[nest(\"/:name\")], Outlet::<Route> {}", "source": "https://dioxuslabs.com/learn/0.7/essentials/router/layouts", "observed": "2026-11-04" },
+    { "claim": "Dioxus hydratation partielle", "value": "issue #1758 'Partial hydration' fermée 2023-12-29 ; aucune issue 'islands' ouverte ; résolution UNVERIFIED", "source": "https://api.github.com/search/issues?q=repo:DioxusLabs/dioxus+%22partial+hydration%22", "observed": "2026-11-04" },
+    { "claim": "Leptos modes SSR", "value": "synchrone, async, in-order, out-of-order (défaut), partially-blocked", "source": "https://book.leptos.dev/ssr/23_ssr_modes.html", "observed": "2026-11-04" },
+    { "claim": "Leptos StaticRoute", "value": "prerender_params + regenerate(Stream<Item=()>) (leptos_router 0.8.17)", "source": "https://docs.rs/leptos_router/latest/leptos_router/static_routes/struct.StaticRoute.html", "observed": "2026-11-04" },
+    { "claim": "server_fn encodages", "value": "Json, Cbor, MsgPack, Postcard, Rkyv, SerdeLite, Bitcode, Multipart, Streaming, StreamingText, TextStream, ByteStream ; pas de Websocket (0.8.13)", "source": "https://docs.rs/server_fn/latest/server_fn/codec/index.html", "observed": "2026-11-04" },
+    { "claim": "Leptos 0.9.0-rc1 cassures", "value": "limites de corps 2 Mo appliquées aux server fns, feature lazy, serde_qs 1.0, traits de signaux ; publié 2026-10-31", "source": "https://github.com/leptos-rs/leptos/releases/tag/v0.9.0-rc1", "observed": "2026-11-04" },
+    { "claim": "Dioxus 0.8.0-alpha.2 cassures", "value": "éléments HTML plus sous dioxus_elements ; libxdo opt-in ; plus de commentaires de placeholders à l'hydratation ; Blitz 0.3.0-beta.3 ; publié 2026-10-14", "source": "https://github.com/DioxusLabs/dioxus/releases/tag/v0.8.0-alpha.2", "observed": "2026-11-04" },
+    { "claim": "Dioxus 0.8.0-alpha.3 cassures", "value": "keyboard-types 0.8, WriteMutations::set_attribute, features desktop retirées, Windows 7 abandonné, rustls ring par défaut, Blitz 0.3.0-beta.4 ; publié 2026-10-16", "source": "https://github.com/DioxusLabs/dioxus/releases/tag/v0.8.0-alpha.3", "observed": "2026-11-04" },
+    { "claim": "Jalon Dioxus 0.8.0", "value": "41 issues ouvertes / 13 fermées, échéance 2025-06-30 dépassée", "source": "https://api.github.com/repos/DioxusLabs/dioxus/milestones?state=open", "observed": "2026-11-04" },
+    { "claim": "Santé GitHub Dioxus", "value": "39598 étoiles, 463 contributeurs, 896 issues ouvertes, Apache-2.0, v0.7.10 2026-07-30, v0.7.0 2025-10-31, v0.6.0 2024-12-09", "source": "https://api.github.com/repos/DioxusLabs/dioxus", "observed": "2026-11-04" },
+    { "claim": "Santé GitHub Leptos", "value": "21461 étoiles, 398 contributeurs, 108 issues ouvertes, MIT, v0.8.23 2026-10-31, v0.8.0 2025-05-01, v0.7.0 2024-11-30", "source": "https://api.github.com/repos/leptos-rs/leptos", "observed": "2026-11-04" },
+    { "claim": "Santé GitHub TanStack", "value": "router 15281 étoiles / 758 contributeurs / 812 issues ; query 50525 / 1151 / 112 ; table 28546 / 503 / 80 ; form 6762 ; virtual 7188 ; db 3977 ; MIT", "source": "https://api.github.com/repos/TanStack/router", "observed": "2026-11-04" },
+    { "claim": "Financement Dioxus", "value": "'Full-time core team' via FutureWei, Satellite.im, GitHub Accelerator (README) ; pré-amorçage ~500 k$ YC/Eight Capital selon agrégateurs : UNVERIFIED", "source": "https://github.com/DioxusLabs/dioxus", "observed": "2026-11-04" },
+    { "claim": "Financement Leptos", "value": "Open Collective total 169,16 USD, budget annuel estimé 170 USD, 2 contributeurs financiers", "source": "https://opencollective.com/leptos", "observed": "2026-11-04" },
+    { "claim": "Financement TanStack", "value": "partenaires Cloudflare, Netlify, Neon, Clerk, Convex, Sentry, Prisma, Strapi, CodeRabbit, AG Grid ; sponsors or Netlify, Render, Vercel, Lovable, Cloudflare, CodeRabbit, Railway", "source": "https://tanstack.com/blog/announcing-tanstack-start-v1", "observed": "2026-11-04 (publié 2025-09-23)" },
+    { "claim": "TanStack Start stabilité et RSC", "value": "'TanStack Start is stable' ; 'Server Components are experimental' ; React 19 + Vite 8 ou Rsbuild 2 requis", "source": "https://tanstack.com/start/latest/docs/framework/react/guide/server-components", "observed": "2026-11-04" },
+    { "claim": "TanStack Start sur Bun", "value": "build Vite + Nitro preset bun, React 19 requis ; aucune voie sans Vite", "source": "https://tanstack.com/start/latest/docs/framework/react/guide/hosting", "observed": "2026-11-04" },
+    { "claim": "TanStack Router SSR sans Start", "value": "createRequestHandler, renderRouterToString / renderRouterToStream, RouterServer / RouterClient ; 'should be regarded as experimental until Start reaches stable status'", "source": "https://tanstack.com/router/latest/docs/framework/react/guide/ssr", "observed": "2026-11-04" },
+    { "claim": "TanStack routage fichiers sans Vite", "value": "@tanstack/router-cli 1.167.46 et router-generator 1.167.46 (2026-10-22)", "source": "https://registry.npmjs.org/@tanstack/router-cli", "observed": "2026-11-04" },
+    { "claim": "TanStack versions npm", "value": "react-start 1.169.4 (2026-10-22), react-start-rsc 0.1.65, react-router 1.170.46, react-query 5.106.0 (2026-11-04), react-table 9.3.1, react-form 1.33.5, react-virtual 3.14.26, react-db 1.0.0-rc.1.3", "source": "https://registry.npmjs.org/@tanstack/react-start", "observed": "2026-11-04" },
+    { "claim": "CVE TanStack Start", "value": "CVE-2026-102989 critique, XSS réfléchi dans les réponses de server functions, 1.143.12 -> corrigé react-start 1.168.60 / start-server-core 1.169.39", "source": "https://tanstack.com/blog/tanstack-start-security-update-cve-2026-102989", "observed": "2026-11-04 (publié 2026-09-30)" },
+    { "claim": "Bun fullstack dev server", "value": "imports HTML, HMR, bun build --target=bun --production ; 'Server-side rendering (SSR) is not built-in' ; RSC non documenté", "source": "https://bun.sh/docs/bundler/fullstack", "observed": "2026-11-04" },
+    { "claim": "Bun et RSC (Jarred Sumner)", "value": "RSC 'not documented and is in a very incomplete state'", "source": "https://thenewstack.io/the-problems-with-react-server-components/", "observed": "2026-11-04 (publié 2025-08-04)" },
+    { "claim": "Débit SSR publié", "value": "ABSENCE de benchmark SSR comparable ; anecdote Leptos 0.6 + Axum (vegeta) : latence 3-5 ms jusqu'à 2000 rps", "source": "https://benw.is/posts/full-stack-rust-with-leptos", "observed": "2026-11-04 (article 2024)" },
+    { "claim": "Micro-benchmark serveur JSON (non SSR, source promotionnelle)", "value": "Dioxus 87638 RPS, Leptos 77135 RPS, Axum 100620 RPS (125 connexions, 10 s)", "source": "https://dev.to/venelouis/a-benchmark-of-23-web-frameworks-the-top-5-were-rust-based-17fb", "observed": "2026-11-04 (année de publication non affichée)" },
+    { "claim": "Téléchargements crates.io", "value": "leptos 5767458 (1627792 récents), dioxus 3531279 (1331910), server_fn 6561291, reactive_graph 3623482, tachys 3542051, taffy 18748556", "source": "https://crates.io/api/v1/crates/leptos", "observed": "2026-11-04" },
+    { "claim": "Fork local Dioxus", "value": "workspace version 0.8.0-alpha.3 ; submodules blitz, taffy, dioxus-components ; packages dioxus / fullstack / router / manganis / subsecond", "source": "C:\\src\\yolo-ui\\Cargo.toml", "observed": "2026-11-04" },
+    { "claim": "Lane Bun locale", "value": "@yolo-rs/fullstack 0.8.0 : App Router, RSC via react-server-dom-parcel, server actions, next/font, next/image, prerender, pont Dioxus (dioxusProxy, callServerFn xxh64, dioxusWebRoutes), ponts TanStack Query ; 7182 lignes TS ; bun test 44 tests / 3 échecs puis 112 / 0 le même jour (paquet en refonte)", "source": "C:\\src\\yolo-ui\\packages\\yolo-fullstack", "observed": "2026-11-04" },
+    { "claim": "yolo-react", "value": "encode_flight_stream, render_rsc_to_html, analyseur OXC des directives use client / use server", "source": "C:\\src\\yolo-ui\\crates\\yolo-react\\src\\rsc.rs", "observed": "2026-11-04" },
+    { "claim": "Bun local", "value": "bun 1.4.4 sur Windows 11", "source": "bun --version", "observed": "2026-11-04" }
+  ],
+  "fusion": {
+    "recommended": true,
+    "principle": "coexistence uniquement aux frontières de processus et de protocole (HTTP, flux RSC Flight, JSON server-fn) ; jamais au niveau du graphe réactif",
+    "layers": [
+      { "layer": 1, "name": "edge Bun", "components": ["Bun.serve", "imports HTML", "@yolo-rs/fullstack (routage App Router, Flight, actions, prerender, fonts, images, CDN)", "dioxusProxy vers Axum"] },
+      { "layer": 2, "name": "runtime Rust", "components": ["Dioxus 0.8 fullstack sur Axum", "server functions", "SSR streaming", "SSG / ISR IncrementalRendererConfig", "manganis", "desktop / mobile / natif Blitz"] },
+      { "layer": 3, "name": "lane TS", "components": ["TanStack Router / Query / Table / Form / Virtual / DB", "Bun.build client / serveur", "yolo-react (Flight Rust + OXC)"] }
+    ],
+    "debt_if": [
+      "reactive_graph ou tachys embarqués dans Dioxus (deux graphes réactifs, deux ordonnanceurs, double hydratation)",
+      "server_fn Leptos en parallèle des server functions Dioxus (deux protocoles)",
+      "TanStack Start (Vite / Rsbuild / Nitro) dans la chaîne Bun"
+    ]
+  },
+  "rejected": [
+    { "candidate": "leptos (runtime)", "reason": "second runtime UI Rust et second graphe réactif ; aucun pont Bun existant ; financement quasi nul ; cassures annuelles 0.7 / 0.8 / 0.9 ; conservé comme référence de conception et challenger de réévaluation" },
+    { "candidate": "tanstack start", "reason": "Vite ou Rsbuild + Nitro obligatoires, RSC expérimental, CVE-2026-102989 ; contraire à la doctrine Bun pur" },
+    { "candidate": "reactive_graph / tachys dans Dioxus", "reason": "double runtime réactif" },
+    { "candidate": "next.js, node, npm, vite, webpack, nitro", "reason": "doctrine" }
+  ],
+  "reevaluation_triggers": [
+    "Dioxus 0.8 stable non publié au 2027-03-31",
+    "budget de bundle non tenu (hello world > 60 KB compressé ou vitrine > 150 KB après wasm-split / opt-level z / wasm-opt)",
+    "Leptos 0.9 stable avec islands router complet et pont Bun démontré"
+  ]
+}

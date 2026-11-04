@@ -1,0 +1,9 @@
+# Configuration Bun du monorepo yolo-stack.
+[install]
+exact = true
+registry = "https://registry.npmjs.org"
+saveTextLockfile = true
+
+[test]
+coverage = false
+timeout = 30000

@@ -1,0 +1,17 @@
+{
+  "name": "@yolo-rs/bun-tools",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Outils du pilier yolo-bun : verification de la version Bun epinglee et garde-fous runtime.",
+  "license": "Apache-2.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "engines": {
+    "bun": ">=1.4.4"
+  },
+  "scripts": {
+    "test": "bun test"
+  }
+}

@@ -1,0 +1,19 @@
+[package]
+name = "yolo-ui-color"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+repository.workspace = true
+authors.workspace = true
+description = "Espace colorimetrique HCT (CAM16 + L*) et palettes tonales pour yolo-ui : sRGB <-> XYZ <-> CAM16 <-> HCT, presets de marque."
+keywords = ["color", "hct", "cam16", "material", "palette"]
+categories = ["graphics", "gui"]
+
+[lib]
+path = "src/lib.rs"
+
+[dependencies]
+
+[lints]
+workspace = true

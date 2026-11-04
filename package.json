@@ -3,27 +3,32 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "The yolo web framework monorepo: TanStack on Bun as the app shell, Dioxus 0.8 for Rust islands and native, Leptos as an optional minimal-wasm islands layer.",
-  "license": "MIT OR Apache-2.0",
+  "description": "Monorepo yolo-stack : Rust (Cargo) + Bun. Piliers yolo-*, harnais de benchmark et applications (Shenron).",
+  "license": "Apache-2.0",
+  "author": "aphrody-dev <contact@aphrody.com>",
   "packageManager": "bun@1.4.4",
   "engines": {
     "bun": ">=1.4.4"
   },
   "workspaces": [
+    "pillars/*/packages/*",
+    "apps/*/packages/*",
     "packages/*",
     "apps/showcase-tanstack",
     "bench"
   ],
   "scripts": {
-    "check": "bun check",
-    "lint": "bun lint",
-    "fmt": "bun fmt",
+    "check": "bun run typecheck && cargo check --workspace",
+    "typecheck": "bun x tsc --noEmit -p tsconfig.json",
     "test": "bun test",
     "bench": "bun run bench/bench.ts",
     "bench:baseline": "bun run bench/bench.ts --target baseline",
-    "cargo:check": "cargo check --workspace"
+    "cargo:check": "cargo check --workspace",
+    "cargo:test": "cargo test --workspace"
   },
   "devDependencies": {
-    "@types/bun": "^1.4.4"
+    "@types/bun": "1.4.4",
+    "bun-types": "1.4.4",
+    "typescript": "5.9.3"
   }
 }

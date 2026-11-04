@@ -22,3 +22,23 @@ node_modules/
 /benches/**/target
 /benches/**/dist
 /docs/benchmarks/*.tmp
+
+# Rust (racine et crates autonomes)
+target/
+**/*.rs.bk
+*.profraw
+
+# Bun
+/dist
+/.bun
+
+# Benchmark
+/bench/out/*.tmp
+*.log
+
+# Secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key

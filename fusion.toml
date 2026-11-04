@@ -1,0 +1,149 @@
+# yolo-stack fusion manifest
+# Declares every repository of the YOLO fleet that can be mounted under repos/<name>.
+# Modes: link (junction/symlink to the local sibling checkout, gitignored), submodule (pinned), subtree (history merged).
+# `bun fusion <status|link|unlink|plan|submodule|subtree|doctor> [name...]` operates on this file.
+
+[fusion]
+mount_dir = "repos"
+default_mode = "link"
+org = "yolo-rs"
+
+[[repo]]
+name = "yolo-ui"
+local = "C:/src/yolo-ui"
+remote = "https://github.com/yolo-rs/yolo-ui.git"
+role = "UI engines, Dioxus 0.8 fork, 8 theme presets, HCT/CAM16 tokens, yolo-react RSC, yolo-migrator"
+kind = "cargo+bun"
+license = "MIT OR Apache-2.0"
+cargo_members = ["crates/yolo-shared", "crates/yolo-tokens", "crates/yolo-react", "crates/yolo-migrator", "crates/yolo-layout", "packages/dioxus", "packages/ssr", "packages/router", "packages/fullstack"]
+bun_workspaces = ["packages/yolo-react", "packages/yolo-ui-plugin", "packages/yolo-ui-mcp"]
+
+[[repo]]
+name = "yolo-web"
+local = "C:/src/yolo-web"
+remote = "https://github.com/yolo-rs/yolo-web.git"
+role = "Browser engines, Obscura CDP, Servo Stylo, scraping and tracker audit"
+kind = "cargo+bun"
+license = "MIT OR Apache-2.0"
+cargo_members = ["crates/obscura-cdp", "crates/obscura-dom", "crates/servo-stylo"]
+bun_workspaces = []
+
+[[repo]]
+name = "yolo-re"
+local = "C:/src/yolo-re"
+remote = "https://github.com/yolo-rs/yolo-re.git"
+role = "Reverse engineering, iced-x86 disassembly, PE/ELF/Mach-O triage, Replica studio"
+kind = "cargo+bun"
+license = "MIT OR Apache-2.0"
+cargo_members = ["crates/aphrody-nie-core", "crates/aphrody-nie-formats", "crates/aphrody-nie-pe"]
+bun_workspaces = []
+
+[[repo]]
+name = "yolo-standards"
+local = "C:/src/yolo-standards"
+remote = "https://github.com/yolo-rs/yolo-standards.git"
+role = "Standards registry (W3C, TC39, WebAssembly, MDN, MCP), POSIX.1-2024, create-yolo-app"
+kind = "cargo+bun"
+license = "MIT OR Apache-2.0"
+cargo_members = ["crates/yolo-posix"]
+bun_workspaces = ["packages/create-yolo-app"]
+
+[[repo]]
+name = "yolo-plugins"
+local = "C:/src/yolo-plugins"
+remote = "https://github.com/yolo-rs/yolo-plugins.git"
+role = "Universal agent plugins, Ed25519 signing, Merkle catalog, marketplace"
+kind = "bun"
+license = "MIT OR Apache-2.0"
+cargo_members = []
+bun_workspaces = ["packages/cli", "packages/crypto", "packages/yolo-universal-mcp"]
+
+[[repo]]
+name = "yolo-os"
+local = "C:/src/yolo-os"
+remote = "https://github.com/yolo-rs/yolo-os.git"
+role = "Linux From Scratch orchestration, cargo-lfs, image qualification"
+kind = "cargo+bun"
+license = "MIT OR Apache-2.0"
+cargo_members = []
+bun_workspaces = []
+
+[[repo]]
+name = "yolo-bun"
+local = "C:/src/yolo-bun"
+remote = "https://github.com/yolo-rs/yolo-bun.git"
+role = "Bun integration monorepo, patch queue, Bun-native adapters, package orchestration"
+kind = "bun"
+license = "MIT OR Apache-2.0"
+cargo_members = []
+bun_workspaces = []
+
+[[repo]]
+name = "yolo-cross"
+local = "C:/src/yolo-cross"
+remote = "https://github.com/yolo-rs/yolo-cross.git"
+role = "Cross toolchains, MSVC, sysroots, Windows FFI adapters"
+kind = "cargo+bun"
+license = "MIT OR Apache-2.0"
+cargo_members = []
+bun_workspaces = []
+
+[[repo]]
+name = "yolo-ai"
+local = "C:/src/yolo-ai"
+remote = "https://github.com/yolo-rs/yolo-ai.git"
+role = "Provider-neutral AI, retrieval, tool and protocol crates"
+kind = "cargo+bun"
+license = "Apache-2.0"
+cargo_members = []
+bun_workspaces = []
+
+[[repo]]
+name = "yolo-vendor"
+local = "C:/src/yolo-vendor"
+remote = "https://github.com/yolo-rs/yolo-vendor.git"
+role = "Upstream specification and vendor mirrors manager"
+kind = "bun"
+license = "MIT OR Apache-2.0"
+cargo_members = []
+bun_workspaces = []
+
+[[repo]]
+name = "yolo-zig"
+local = "C:/src/yolo-zig"
+remote = "https://github.com/yolo-rs/yolo-zig.git"
+role = "Zig and C-ABI native workspace, FFI bindings"
+kind = "zig+bun"
+license = "MIT OR Apache-2.0"
+cargo_members = []
+bun_workspaces = []
+
+[[repo]]
+name = "yolo-vps"
+local = "C:/src/yolo-vps"
+remote = "https://github.com/yolo-rs/yolo-vps.git"
+role = "Fleet inventory and deployment factory for the VPS hosts"
+kind = "cargo+bun"
+license = "MIT OR Apache-2.0"
+cargo_members = []
+bun_workspaces = []
+
+[[repo]]
+name = "yolo"
+local = "C:/src/yolo"
+remote = "https://github.com/yolo-rs/yolo.git"
+role = "Fleet registry, status inventory, grind orchestrator"
+kind = "bun"
+license = "MIT OR Apache-2.0"
+cargo_members = []
+bun_workspaces = []
+
+[[repo]]
+name = "bun-ui"
+local = "C:/src/bun-ui"
+remote = ""
+role = "Legacy Material 3 Bun UI stack (aphrody-m3-*), absorbed by yolo-ui"
+kind = "cargo+bun"
+license = "MIT OR Apache-2.0"
+cargo_members = []
+bun_workspaces = []

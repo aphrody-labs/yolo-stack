@@ -1,23 +1,32 @@
 {
   "compilerOptions": {
     "target": "ESNext",
+    "lib": ["ESNext", "DOM"],
     "module": "Preserve",
     "moduleResolution": "bundler",
-    "lib": ["ESNext", "DOM"],
-    "types": ["bun"],
+    "moduleDetection": "force",
+    "types": ["bun-types"],
     "jsx": "react-jsx",
     "strict": true,
     "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noFallthroughCasesInSwitch": true,
+    "useUnknownInCatchVariables": true,
     "allowImportingTsExtensions": true,
     "verbatimModuleSyntax": true,
-    "noEmit": true,
-    "skipLibCheck": true
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "skipLibCheck": true,
+    "noEmit": true
   },
   "include": [
+    "pillars/*/packages/*/**/*.ts",
+    "apps/*/packages/*/**/*.ts",
     "packages/**/*.ts",
     "packages/**/*.tsx",
     "apps/**/*.ts",
     "apps/**/*.tsx",
     "bench/*.ts"
-  ]
+  ],
+  "exclude": ["node_modules", "target", "dist", "apps/next-fixture"]
 }
