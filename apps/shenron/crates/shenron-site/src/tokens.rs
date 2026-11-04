@@ -1,8 +1,8 @@
-//! Design tokens: the single source of truth for the generated stylesheet.
-//!
-//! This file is `include!`d by `build.rs` (which renders `style/main.css`) and
-//! compiled as a normal module of the crate, so it must stay dependency-free.
-//! Palette: HCT-derived Shenron brand (orange ki, Kame blue, parchment paper).
+// Design tokens: the single source of truth for the generated stylesheet.
+//
+// This file is `include!`d by `build.rs` (which renders `style/main.css`) and
+// compiled as a normal module of the crate, so it must stay dependency-free.
+// Palette: HCT-derived Shenron brand (orange ki, Kame blue, parchment paper).
 
 /// A named color exposed as `--color-<name>`.
 pub struct ColorToken {
