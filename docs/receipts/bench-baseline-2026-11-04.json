@@ -1,0 +1,92 @@
+{
+  "target": "baseline",
+  "status": "runnable",
+  "date": "2026-11-04T22:31:43.533Z",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "bun": "1.4.4",
+    "cpus": 24
+  },
+  "settings": {
+    "duration": 3,
+    "connections": 32,
+    "warmup": 1
+  },
+  "note": "load generator and server share one host; compare targets only within one session",
+  "artifacts": {
+    "files": [],
+    "total": {
+      "raw": 0,
+      "gzip": 0,
+      "brotli": 0
+    }
+  },
+  "routes": [
+    {
+      "id": "home",
+      "path": "/",
+      "status": 200,
+      "bytes": 108,
+      "requests": 161883,
+      "errors": 0,
+      "seconds": 3,
+      "rps": 53955,
+      "mean_ms": 0.593,
+      "p50_ms": 0.553,
+      "p99_ms": 1.385
+    },
+    {
+      "id": "links-100",
+      "path": "/links",
+      "status": 200,
+      "bytes": 3807,
+      "requests": 114065,
+      "errors": 0,
+      "seconds": 3,
+      "rps": 38016.2,
+      "mean_ms": 0.841,
+      "p50_ms": 0.764,
+      "p99_ms": 2.457
+    },
+    {
+      "id": "table-1k",
+      "path": "/table",
+      "status": 200,
+      "bytes": 38905,
+      "requests": 47333,
+      "errors": 0,
+      "seconds": 3.001,
+      "rps": 15770.8,
+      "mean_ms": 2.029,
+      "p50_ms": 1.844,
+      "p99_ms": 3.896
+    },
+    {
+      "id": "island-counter",
+      "path": "/island",
+      "status": 200,
+      "bytes": 128,
+      "requests": 223727,
+      "errors": 0,
+      "seconds": 3,
+      "rps": 74569.7,
+      "mean_ms": 0.429,
+      "p50_ms": 0.416,
+      "p99_ms": 1.048
+    },
+    {
+      "id": "api-json",
+      "path": "/api/health",
+      "status": 200,
+      "bytes": 30,
+      "requests": 207895,
+      "errors": 0,
+      "seconds": 3,
+      "rps": 69292.8,
+      "mean_ms": 0.461,
+      "p50_ms": 0.442,
+      "p99_ms": 1.159
+    }
+  ]
+}

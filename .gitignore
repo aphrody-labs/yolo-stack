@@ -1,0 +1,24 @@
+# Build outputs
+/target
+/dist
+/.yolo
+/node_modules
+node_modules/
+*.tsbuildinfo
+
+# Fusion links (directory junctions / symlinks to sibling repos; use `bun fusion subtree` to materialize)
+/repos/*
+!/repos/README.md
+
+# Local tooling
+.claude/settings.local.json
+.DS_Store
+.idea/
+.zed/
+.vscode/*
+!.vscode/settings.json
+
+# Benchmark scratch
+/benches/**/target
+/benches/**/dist
+/docs/benchmarks/*.tmp

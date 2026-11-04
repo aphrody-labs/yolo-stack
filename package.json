@@ -1,0 +1,29 @@
+{
+  "name": "@yolo-rs/yolo-stack",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "The yolo web framework monorepo: TanStack on Bun as the app shell, Dioxus 0.8 for Rust islands and native, Leptos as an optional minimal-wasm islands layer.",
+  "license": "MIT OR Apache-2.0",
+  "packageManager": "bun@1.4.4",
+  "engines": {
+    "bun": ">=1.4.4"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/showcase-tanstack",
+    "bench"
+  ],
+  "scripts": {
+    "check": "bun check",
+    "lint": "bun lint",
+    "fmt": "bun fmt",
+    "test": "bun test",
+    "bench": "bun run bench/bench.ts",
+    "bench:baseline": "bun run bench/bench.ts --target baseline",
+    "cargo:check": "cargo check --workspace"
+  },
+  "devDependencies": {
+    "@types/bun": "^1.4.4"
+  }
+}

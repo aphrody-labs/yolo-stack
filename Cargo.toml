@@ -1,0 +1,42 @@
+# yolo-stack Cargo workspace.
+# Only crates that compile without the yolo-ui workspace are members today.
+# yolo-stack-dioxus and yolo-stack-leptos join the member list once their adapter code lands
+# (see crates/README.md for the planned path/git dependencies on C:/src/yolo-ui).
+[workspace]
+resolver = "3"
+members = ["crates/yolo-stack-routes"]
+exclude = ["crates/yolo-stack-dioxus", "crates/yolo-stack-leptos"]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.95"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/yolo-rs/yolo-stack"
+
+[workspace.dependencies]
+# Shared route table (Rust side). Mirrors packages/yolo-stack-routes.
+yolo-stack-routes = { path = "crates/yolo-stack-routes" }
+# Consumers of yolo-ui crates point at the sibling checkout. Switch to git deps when yolo-ui is published.
+yolo-tokens = { path = "../yolo-ui/crates/yolo-tokens", default-features = false }
+yolo-layout = { path = "../yolo-ui/crates/yolo-layout", default-features = false }
+dioxus = { path = "../yolo-ui/packages/dioxus", version = "=0.8.0-alpha.3" }
+dioxus-fullstack = { path = "../yolo-ui/packages/fullstack", version = "=0.8.0-alpha.3" }
+dioxus-router = { path = "../yolo-ui/packages/router", version = "=0.8.0-alpha.3" }
+dioxus-ssr = { path = "../yolo-ui/packages/ssr", version = "=0.8.0-alpha.3" }
+# Leptos is not vendored anywhere in the YOLO tree; crates.io pin, 0.8.23 stable on 2026-10-31.
+leptos = { version = "=0.8.23", default-features = false }
+leptos_router = { version = "=0.8.23" }
+leptos_axum = { version = "=0.8.23" }
+axum = "0.8"
+serde = { version = "1", features = ["derive"] }
+
+[profile.release]
+# Same baseline as yolo-ui/upstream Dioxus; measure any change separately (AGENTS.md).
+lto = true
+codegen-units = 1
+opt-level = 3
+
+[profile.wasm-size]
+inherits = "release"
+opt-level = "z"

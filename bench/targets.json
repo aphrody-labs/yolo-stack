@@ -1,0 +1,40 @@
+{
+  "$comment": "One entry per stack. `build` runs before `serve`; `serve` must listen on `port` (PORT env is set). `artifacts` are globbed for size reporting. Commands run from `cwd` with Bun; no npm/npx.",
+  "targets": {
+    "baseline": {
+      "cwd": "bench",
+      "build": null,
+      "serve": ["bun", "run", "baseline-server.ts"],
+      "port": 4100,
+      "artifacts": [],
+      "status": "runnable"
+    },
+    "tanstack": {
+      "cwd": "apps/showcase-tanstack",
+      "build": ["bun", "run", "build"],
+      "serve": ["bun", "run", "start"],
+      "port": 4101,
+      "artifacts": ["dist/client/**/*.js", "dist/client/**/*.css"],
+      "status": "planned"
+    },
+    "dioxus": {
+      "cwd": "apps/showcase-dioxus",
+      "build": ["dx", "build", "--release", "--platform", "web", "--fullstack"],
+      "serve": ["bun", "run", "start"],
+      "port": 4102,
+      "artifacts": [
+        "target/dx/**/public/**/*.wasm",
+        "target/dx/**/public/**/*.js"
+      ],
+      "status": "planned"
+    },
+    "leptos": {
+      "cwd": "apps/showcase-leptos",
+      "build": ["cargo", "leptos", "build", "--release"],
+      "serve": ["bun", "run", "start"],
+      "port": 4103,
+      "artifacts": ["target/site/pkg/*.wasm", "target/site/pkg/*.js"],
+      "status": "planned"
+    }
+  }
+}

@@ -1,0 +1,10 @@
+{
+  "name": "@yolo-rs/stack-bench",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Reproducible local benchmark harness for the yolo-stack showcase apps (Bun only).",
+  "dependencies": {
+    "@yolo-rs/stack-routes": "workspace:*"
+  }
+}
