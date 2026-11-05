@@ -13,7 +13,7 @@ use leptos_router::{
 use crate::{
     boot::BOOT_JS,
     content::{databook_slugs, langs, manga_chapters, wiki_slugs},
-    i18n::{t, Lang},
+    i18n::{Lang, t},
     pages::{CharactersPage, DatabookPage, HomePage, MangaPage, NotFound, ThemePage, WikiPage},
     theme_ui::{ThemeBrand, ThemePet, ThemeRuntime, ThemeSwitcher},
     themes::DEFAULT_ID,

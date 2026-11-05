@@ -11,6 +11,10 @@ async fn first_stream_chunk_contains_the_closing_head() {
     let options = LeptosOptions::builder().output_name("shenron-site").build();
     let mut stream = Box::pin(shenron_site::app::shell(options).to_html_stream_in_order());
     let first = stream.next().await.unwrap_or_default();
-    println!("FIRST CHUNK ({} bytes) TAIL: {}", first.len(), &first[first.len().saturating_sub(300)..]);
+    println!(
+        "FIRST CHUNK ({} bytes) TAIL: {}",
+        first.len(),
+        &first[first.len().saturating_sub(300)..]
+    );
     assert!(first.contains("</head>"));
 }
