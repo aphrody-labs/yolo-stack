@@ -140,7 +140,9 @@ describe("next/* resolution", () => {
     const counter = await build.load(join(FIXTURE, "app", "components", "Counter.tsx"));
     expect(counter && "contents" in counter ? String(counter.contents) : "").toContain("registerClientReference");
     expect(seen).toEqual(["app/components/Counter.tsx"]);
-    expect(await build.load(join(FIXTURE, "app", "page.tsx"))).toBeUndefined();
+    // Files without a directive pass through unchanged (Bun 1.4.6 rejects `undefined` for real files).
+    const page = await build.load(join(FIXTURE, "app", "page.tsx"));
+    expect(page).toEqual({ contents: await Bun.file(join(FIXTURE, "app", "page.tsx")).text(), loader: "tsx" });
     expect(await build.load(join(FIXTURE, "..", "outside.tsx"))).toBeUndefined();
     expect(await build.load(join(FIXTURE, "node_modules", "pkg", "index.js"))).toBeUndefined();
   });
