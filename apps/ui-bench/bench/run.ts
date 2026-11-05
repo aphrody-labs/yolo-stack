@@ -152,15 +152,16 @@ async function measure(cdp: CDP, url: string) {
   })()`);
 
   // One real click through the input pipeline on the page's marked trigger (tab or disclosure).
-  let click: { x: number; y: number } | null = null;
+  let click: { x: number; y: number; hit: boolean } | null = null;
   if (before.hasTarget) {
     click = await evalJSON(`(() => { const el = document.querySelector("[data-bench-click]");
-      el.scrollIntoView({ block: "center" }); const r = el.getBoundingClientRect();
-      return { x: r.x + r.width / 2, y: r.y + r.height / 2 }; })()`);
+      el.scrollIntoView({ block: "center", behavior: "instant" }); const r = el.getBoundingClientRect();
+      const x = r.x + r.width / 2, y = r.y + r.height / 2;
+      return { x, y, hit: el.contains(document.elementFromPoint(x, y)) }; })()`);
     await sleep(500);
     await s("Input.dispatchMouseEvent", { type: "mouseMoved", x: click!.x, y: click!.y });
-    await s("Input.dispatchMouseEvent", { type: "mousePressed", x: click!.x, y: click!.y, button: "left", clickCount: 1 });
-    await s("Input.dispatchMouseEvent", { type: "mouseReleased", x: click!.x, y: click!.y, button: "left", clickCount: 1 });
+    await s("Input.dispatchMouseEvent", { type: "mousePressed", x: click!.x, y: click!.y, button: "left", buttons: 1, clickCount: 1 });
+    await s("Input.dispatchMouseEvent", { type: "mouseReleased", x: click!.x, y: click!.y, button: "left", buttons: 0, clickCount: 1 });
     await sleep(1500);
   }
   const after = await evalJSON(`(() => { const b = window.__bench;
@@ -197,9 +198,13 @@ async function measure(cdp: CDP, url: string) {
     tbt,
     longTasks: tbtTasks.length,
     longTaskMs: tbtTasks.reduce((a, [, d]) => a + d, 0),
+    // Whole load, including tasks before FCP (client rendering delays FCP rather than adding TBT).
+    longTasksAll: (before.longtasks as [number, number][]).length,
+    longTaskMsAll: (before.longtasks as [number, number][]).reduce((a, [, d]) => a + d, 0),
     inp,
     clickEvents: interactions.map(e => ({ name: e.name, dur: e.dur })),
-    clickEffective: after.expanded,
+    clickHit: click?.hit ?? false,
+    clickEffective: after.expanded === true || after.expanded === "true",
     dcl: before.nav.dcl,
     load: before.nav.load,
     loadWall,
@@ -207,6 +212,28 @@ async function measure(cdp: CDP, url: string) {
     requests: [...requests.values()].map(r => ({ url: r.url.replace(/^https?:\/\/[^/]+/, ""), type: r.type, status: r.status, bytes: r.bytes })),
     bytes,
   };
+}
+
+/** Same busy loop unthrottled and at CPU_RATE, and a check that long tasks are observed. */
+async function calibrate(cdp: CDP) {
+  const out: Record<string, unknown> = {};
+  for (const rate of [1, CPU_RATE]) {
+    const { browserContextId } = await cdp.send("Target.createBrowserContext", { disposeOnDetach: true });
+    const { targetId } = await cdp.send("Target.createTarget", { url: "about:blank", browserContextId });
+    const { sessionId } = await cdp.send("Target.attachToTarget", { targetId, flatten: true });
+    await cdp.send("Emulation.setCPUThrottlingRate", { rate }, sessionId);
+    const r = await cdp.send("Runtime.evaluate", {
+      returnByValue: true,
+      awaitPromise: true,
+      expression: `new Promise(res => {
+        const lt = []; new PerformanceObserver(l => l.getEntries().forEach(e => lt.push(e.duration))).observe({ type: "longtask" });
+        setTimeout(() => { const t = performance.now(); let x = 0; for (let i = 0; i < 2e7; i++) x += i % 7; const ms = performance.now() - t;
+          setTimeout(() => res({ loopMs: ms, longTasks: lt }), 300); }, 50); })`,
+    }, sessionId);
+    out[`rate${rate}`] = r.result.value;
+    await cdp.send("Target.disposeBrowserContext", { browserContextId });
+  }
+  return out;
 }
 
 async function hostInfo() {
@@ -219,6 +246,8 @@ const { proc, version } = await launch();
 const cdp = await CDP.connect(version.webSocketDebuggerUrl);
 const startedAt = new Date().toISOString();
 const results: any[] = [];
+const calibration = await calibrate(cdp);
+console.log("cpu calibration", JSON.stringify(calibration));
 try {
   // Warm both servers (Bun bundles HTML imports on first request) outside the measured loads.
   for (const kit of KITS) for (const [lane, base] of Object.entries(LANES)) for (const p of Object.values(PAGES)) {
@@ -243,14 +272,14 @@ try {
   proc.kill();
 }
 
-const keys = ["ttfb", "fcp", "lcp", "cls", "tbt", "longTasks", "longTaskMs", "inp", "dcl", "load", "domNodes"] as const;
+const keys = ["ttfb", "fcp", "lcp", "cls", "tbt", "longTasks", "longTaskMs", "longTasksAll", "longTaskMsAll", "inp", "dcl", "load", "domNodes"] as const;
 const summary: any[] = [];
 for (const kit of KITS) for (const lane of Object.keys(LANES)) for (const page of Object.keys(PAGES)) {
   const rows = results.filter(r => r.kit === kit && r.lane === lane && r.page === page);
   const med: Record<string, number | null> = {};
   for (const k of keys) med[k] = median(rows.map(r => (k === "inp" ? (r.inp ?? 0) : r[k]) as number));
   for (const b of ["total", "document", "script", "stylesheet", "font", "image", "other"]) med[`bytes_${b}`] = median(rows.map(r => r.bytes[b]));
-  summary.push({ kit, lane, page, runs: rows.length, inpBelowThreshold: rows.filter(r => r.inp === null).length, clickEffective: rows.filter(r => r.clickEffective === true || r.clickEffective === "true").length, median: med });
+  summary.push({ kit, lane, page, runs: rows.length, inpBelowThreshold: rows.filter(r => r.inp === null).length, clickEffective: rows.filter(r => r.clickEffective).length, median: med });
 }
 
 const meta = {
@@ -261,6 +290,7 @@ const meta = {
   bun: Bun.version,
   lanes: LANES,
   runs: RUNS,
+  calibration,
   throttling: { network: NETWORK, cpuRate: CPU_RATE, viewport: VIEWPORT, cache: "disabled, fresh browser context per load" },
 };
 mkdirSync(OUT, { recursive: true });
@@ -269,11 +299,11 @@ await Bun.write(`${OUT}/summary.json`, JSON.stringify({ meta, summary }, null, 2
 
 const f = (v: number | null, d = 0) => (v === null ? "n/a" : v.toFixed(d));
 const kb = (v: number | null) => (v === null ? "n/a" : (v / 1024).toFixed(1));
-let md = "| Kit | Lane | Page | TTFB ms | FCP ms | LCP ms | CLS | TBT ms | Long tasks | Click INP ms | Total KiB | JS KiB | CSS KiB | HTML KiB |\n|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n";
+let md = "| Kit | Lane | Page | TTFB ms | FCP ms | LCP ms | CLS | TBT ms | Long-task ms (whole load) | Click INP ms | Total KiB | JS KiB | CSS KiB | HTML KiB |\n|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|\n";
 for (const r of summary) {
   const m = r.median;
   const inp = r.inpBelowThreshold > r.runs / 2 ? "<16" : f(m.inp);
-  md += `| ${r.kit} | ${r.lane} | ${r.page} | ${f(m.ttfb)} | ${f(m.fcp)} | ${f(m.lcp)} | ${f(m.cls, 4)} | ${f(m.tbt)} | ${f(m.longTasks)} | ${inp} | ${kb(m.bytes_total)} | ${kb(m.bytes_script)} | ${kb(m.bytes_stylesheet)} | ${kb(m.bytes_document)} |\n`;
+  md += `| ${r.kit} | ${r.lane} | ${r.page} | ${f(m.ttfb)} | ${f(m.fcp)} | ${f(m.lcp)} | ${f(m.cls, 4)} | ${f(m.tbt)} | ${f(m.longTaskMsAll)} | ${inp} | ${kb(m.bytes_total)} | ${kb(m.bytes_script)} | ${kb(m.bytes_stylesheet)} | ${kb(m.bytes_document)} |\n`;
 }
 await Bun.write(`${OUT}/summary.md`, md);
 console.log(`\n${md}`);
