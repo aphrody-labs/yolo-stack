@@ -1,4 +1,4 @@
-.kits/
+.kits
 node_modules/
 dist/
 lane-leptos/target/
