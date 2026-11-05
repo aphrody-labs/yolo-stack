@@ -3,7 +3,7 @@ use leptos_router::hooks::use_params_map;
 
 use crate::{
     content::humanize,
-    i18n::{tf, Lang},
+    i18n::{Lang, tf},
     pages::with_lang,
     seo::SeoHead,
 };

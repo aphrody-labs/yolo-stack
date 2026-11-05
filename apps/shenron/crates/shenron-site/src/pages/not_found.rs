@@ -2,7 +2,7 @@ use leptos::prelude::*;
 use leptos_router::hooks::use_location;
 
 use crate::{
-    i18n::{t, Lang},
+    i18n::{Lang, t},
     seo::SeoHead,
 };
 

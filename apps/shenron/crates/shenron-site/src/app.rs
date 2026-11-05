@@ -1,18 +1,18 @@
 //! Application shell, layout and static route tree.
 
 use leptos::prelude::*;
-use leptos_meta::{provide_meta_context, Html, MetaTags, Stylesheet};
+use leptos_meta::{Html, MetaTags, Stylesheet, provide_meta_context};
 use leptos_router::{
+    SsrMode,
     components::{Route, Router, Routes},
     hooks::use_location,
     path,
     static_routes::{StaticParamsMap, StaticRoute},
-    SsrMode,
 };
 
 use crate::{
     content::{databook_slugs, langs, manga_chapters, wiki_slugs},
-    i18n::{t, Lang},
+    i18n::{Lang, t},
     pages::{CharactersPage, DatabookPage, HomePage, MangaPage, NotFound, WikiPage},
 };
 
@@ -70,8 +70,14 @@ fn manga_params() -> StaticRoute {
         let chapters = manga_chapters();
         let mut map = StaticParamsMap::new();
         map.insert("lang", langs());
-        map.insert("volume", chapters.iter().map(|(v, _)| v.to_string()).collect());
-        map.insert("chapter", chapters.iter().map(|(_, c)| c.to_string()).collect());
+        map.insert(
+            "volume",
+            chapters.iter().map(|(v, _)| v.to_string()).collect(),
+        );
+        map.insert(
+            "chapter",
+            chapters.iter().map(|(_, c)| c.to_string()).collect(),
+        );
         map
     })
 }

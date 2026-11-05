@@ -140,7 +140,11 @@ mod tests {
 
     #[test]
     fn placeholders_are_substituted() {
-        let s = tf(Lang::En, "manga.heading", &[("volume", "1"), ("chapter", "3")]);
+        let s = tf(
+            Lang::En,
+            "manga.heading",
+            &[("volume", "1"), ("chapter", "3")],
+        );
         assert_eq!(s, "Volume 1 - Chapter 3");
     }
 

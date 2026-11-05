@@ -2,7 +2,7 @@ use leptos::prelude::*;
 
 use crate::{
     content::{character_slugs, humanize},
-    i18n::{t, Lang},
+    i18n::{Lang, t},
     pages::with_lang,
     seo::SeoHead,
 };
