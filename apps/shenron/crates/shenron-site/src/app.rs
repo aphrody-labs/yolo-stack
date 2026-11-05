@@ -23,7 +23,7 @@ use crate::{
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
-        <html lang="fr" data-theme=DEFAULT_ID>
+        <html data-theme=DEFAULT_ID>
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />

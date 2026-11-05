@@ -7,7 +7,7 @@ async fn main() {
     use leptos::prelude::*;
     use leptos_axum::{generate_route_list_with_ssg, LeptosRoutes};
     use shenron_site::{
-        app::{shell, App},
+        app::shell,
         server::{legacy_redirect, robots_txt, root_redirect, sitemap_xml},
     };
 
@@ -17,7 +17,11 @@ async fn main() {
 
     // Walks the <Routes> tree once, then prerenders every SsrMode::Static route
     // (from `prerender_params`) into `site-root`.
-    let (routes, static_routes) = generate_route_list_with_ssg(App);
+    // The app function must be the whole document (shell), or leptos_meta finds no <head>.
+    let (routes, static_routes) = generate_route_list_with_ssg({
+        let leptos_options = leptos_options.clone();
+        move || shell(leptos_options.clone())
+    });
     static_routes.generate(&leptos_options).await;
 
     let app = Router::new()
