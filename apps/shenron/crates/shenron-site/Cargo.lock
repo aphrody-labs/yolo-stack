@@ -1759,6 +1759,8 @@ dependencies = [
  "tower",
  "tower-http",
  "wasm-bindgen",
+ "web-sys",
+ "yolo-stack-theme",
 ]
 
 [[package]]
@@ -2410,6 +2412,44 @@ dependencies = [
  "quote",
  "syn 3.0.9",
  "synstructure",
+]
+
+[[package]]
+name = "yolo-shared"
+version = "0.8.0-alpha.3"
+dependencies = [
+ "serde",
+]
+
+[[package]]
+name = "yolo-stack-theme"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror 2.0.21",
+ "toml",
+ "yolo-theme-pack",
+ "yolo-tokens",
+]
+
+[[package]]
+name = "yolo-theme-pack"
+version = "0.8.0-alpha.3"
+dependencies = [
+ "serde",
+ "serde_json",
+ "sha2",
+ "toml",
+ "yolo-tokens",
+]
+
+[[package]]
+name = "yolo-tokens"
+version = "0.8.0-alpha.3"
+dependencies = [
+ "base64",
+ "yolo-shared",
 ]
 
 [[package]]

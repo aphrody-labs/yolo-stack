@@ -21,6 +21,7 @@ required-features = ["ssr"]
 
 [dependencies]
 leptos = { version = "0.8.23" }
+yolo-stack-theme = { path = "../../../../crates/yolo-stack-theme" }
 leptos_router = { version = "0.8.17" }
 leptos_meta = { version = "0.8.7" }
 serde = { version = "1", features = ["derive"] }
@@ -35,17 +36,28 @@ tower-http = { version = "0.6", features = ["fs"], optional = true }
 
 # --- client (hydrate, wasm32) ---
 wasm-bindgen = { version = "0.2", optional = true }
+web-sys = { version = "0.3", optional = true, features = ["Window", "Document", "Element", "HtmlDocument", "HtmlElement", "Storage", "MediaQueryList", "PointerEvent", "Node", "EventTarget"] }
 console_error_panic_hook = { version = "0.1", optional = true }
+
+[build-dependencies]
+yolo-stack-theme = { path = "../../../../crates/yolo-stack-theme" }
+
+[dev-dependencies]
+futures = "0.3"
+tokio = { version = "1", features = ["rt", "macros"] }
 
 [features]
 default = []
 hydrate = [
   "leptos/hydrate",
+  "leptos/islands",
   "dep:wasm-bindgen",
+  "dep:web-sys",
   "dep:console_error_panic_hook",
 ]
 ssr = [
   "leptos/ssr",
+  "leptos/islands",
   "leptos_router/ssr",
   "leptos_meta/ssr",
   "dep:leptos_axum",
