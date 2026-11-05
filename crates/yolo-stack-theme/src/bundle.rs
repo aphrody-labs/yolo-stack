@@ -324,7 +324,10 @@ impl ThemeBundle {
         for meta in &self.extras.asset {
             let license = meta.license.trim();
             if !yolo_theme_pack::manifest::is_distributable_license(license) {
-                issues.push(format!("asset `{}` has no distributable licence (empty, unverified or pending)", meta.file));
+                issues.push(format!(
+                    "asset `{}` has no distributable licence (empty, unverified or pending)",
+                    meta.file
+                ));
             }
         }
         let mut seen = BTreeSet::new();
