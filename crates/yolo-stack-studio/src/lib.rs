@@ -33,7 +33,13 @@ pub struct WorkbenchEntry {
 
 impl From<&CraftWorkbenchContract> for WorkbenchEntry {
     fn from(c: &CraftWorkbenchContract) -> Self {
-        Self { id: c.id, name: c.display_name, capability: c.capability, extensions: c.extensions, tools: c.tools }
+        Self {
+            id: c.id,
+            name: c.display_name,
+            capability: c.capability,
+            extensions: c.extensions,
+            tools: c.tools,
+        }
     }
 }
 
@@ -65,8 +71,14 @@ pub struct StudioCatalog {
 #[must_use]
 pub fn catalog() -> StudioCatalog {
     StudioCatalog {
-        workbenches: yolo_craft::workbenches::all_workbenches().iter().map(WorkbenchEntry::from).collect(),
-        modules: StorytellerModuleKind::ALL.into_iter().map(ModuleEntry::from).collect(),
+        workbenches: yolo_craft::workbenches::all_workbenches()
+            .iter()
+            .map(WorkbenchEntry::from)
+            .collect(),
+        modules: StorytellerModuleKind::ALL
+            .into_iter()
+            .map(ModuleEntry::from)
+            .collect(),
     }
 }
 
@@ -91,7 +103,9 @@ pub fn workbenches_for_extension(extension: &str) -> Vec<&'static str> {
 /// Finds a Storyteller module by its id.
 #[must_use]
 pub fn module(id: &str) -> Option<StorytellerModuleKind> {
-    StorytellerModuleKind::ALL.into_iter().find(|kind| kind.id() == id)
+    StorytellerModuleKind::ALL
+        .into_iter()
+        .find(|kind| kind.id() == id)
 }
 
 /// Creates a Storyteller project with every module enabled, themed with `preset`.
@@ -110,7 +124,12 @@ mod tests {
         let c = catalog();
         assert_eq!(c.workbenches.len(), 13);
         assert_eq!(c.modules.len(), 10);
-        let ids: HashSet<_> = c.workbenches.iter().map(|w| w.id).chain(c.modules.iter().map(|m| m.id)).collect();
+        let ids: HashSet<_> = c
+            .workbenches
+            .iter()
+            .map(|w| w.id)
+            .chain(c.modules.iter().map(|m| m.id))
+            .collect();
         assert_eq!(ids.len(), 23, "ids must be unique across studios");
     }
 
@@ -119,8 +138,15 @@ mod tests {
         for w in catalog().workbenches {
             assert_eq!(workbench(w.id).map(|c| c.id), Some(w.id));
             for ext in w.extensions {
-                assert!(workbenches_for_extension(ext).contains(&w.id), "{} should open .{ext}", w.id);
-                assert!(workbenches_for_extension(&format!(".{}", ext.to_ascii_uppercase())).contains(&w.id));
+                assert!(
+                    workbenches_for_extension(ext).contains(&w.id),
+                    "{} should open .{ext}",
+                    w.id
+                );
+                assert!(
+                    workbenches_for_extension(&format!(".{}", ext.to_ascii_uppercase()))
+                        .contains(&w.id)
+                );
             }
         }
         for m in StorytellerModuleKind::ALL {
