@@ -184,7 +184,7 @@ pub fn gallery(site: &'static Site) -> AnyView {
                 <div class="zt w-full">
                     {g.tabs.iter().enumerate().map(|(i, t)| view! {
                         <input class="zt-radio sr-only" type="radio" name="rg-tabs" id=format!("rg-tab-{}", t.id)
-                            data-tab=i.to_string() checked=(i == 0) />
+                            data-tab=i.to_string() checked={i == 0} />
                     }).collect_view()}
                     <div role="tablist" class="inline-flex h-10 items-center justify-center rounded-md bg-muted p-1 text-muted-foreground">
                         {g.tabs.iter().enumerate().map(|(i, t)| view! {

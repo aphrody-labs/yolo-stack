@@ -46,7 +46,6 @@ pub struct CardItem {
 
 #[derive(Deserialize)]
 pub struct Faq {
-    pub id: String,
     pub q: String,
     pub a: String,
 }
