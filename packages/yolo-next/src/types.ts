@@ -890,3 +890,13 @@ export const ACTION_FIELD = {
   ref: "$ACTION_REF_",
   payload: "$ACTION_",
 } as const;
+
+// ---------------------------------------------------------------------------
+// Resolved Yolo config (output of defineYoloConfig / resolveYoloConfig)
+// ---------------------------------------------------------------------------
+
+/** Normalized Yolo config plus the original Next.js config it was derived from and the migration diagnostics. */
+export type ResolvedYoloConfig = YoloWebConfig & {
+  readonly next: NextCompatConfig;
+  readonly diagnostics: Diagnostic[];
+};

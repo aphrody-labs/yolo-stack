@@ -29,3 +29,10 @@ Do not install or run this project; it is a static fixture.
 - Route Handlers (`app/api/**/route.ts`) and legacy Pages Router files (`pages/legacy.tsx`,
   `pages/_app.tsx`, `pages/api/legacy.ts`).
 - Instrumentation: `instrumentation.ts` and `instrumentation-client.ts`.
+
+## Note on raw files
+
+`app/globals.css`, `app/icon.svg`, `public/*.svg` and the font placeholder exist only because a Next.js 16
+project contains them: they are migration input data consumed by `crates/yolo-next` and `packages/yolo-next`,
+never framework source. The yolo-stack rule "no raw .html/.css/.js source" applies to emitted code, which
+takes its tokens from `yolo-tokens` presets.

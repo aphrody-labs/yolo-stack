@@ -16,7 +16,7 @@ role = "UI engines, Dioxus 0.8 fork, 8 theme presets, HCT/CAM16 tokens, yolo-rea
 kind = "cargo+bun"
 license = "MIT OR Apache-2.0"
 cargo_members = ["crates/yolo-shared", "crates/yolo-tokens", "crates/yolo-react", "crates/yolo-migrator", "crates/yolo-layout", "packages/dioxus", "packages/ssr", "packages/router", "packages/fullstack"]
-bun_workspaces = ["packages/yolo-react", "packages/yolo-ui-plugin", "packages/yolo-ui-mcp"]
+bun_workspaces = ["packages/yolo-react", "packages/yolo-ui-plugin", "packages/yolo-ui-mcp", "packages/yolo-fullstack"]
 
 [[repo]]
 name = "yolo-web"
