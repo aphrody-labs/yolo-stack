@@ -28,5 +28,5 @@
     "apps/**/*.tsx",
     "bench/*.ts"
   ],
-  "exclude": ["node_modules", "target", "dist", "apps/next-fixture"]
+  "exclude": ["node_modules", "target", "dist", "apps/next-fixture", "apps/ui-bench"]
 }
