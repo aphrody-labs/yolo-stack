@@ -2,7 +2,7 @@
 
 use leptos::prelude::*;
 
-use crate::i18n::{t, Lang};
+use crate::i18n::{Lang, t};
 
 /// DOM id of the reader surface. Keep in sync with the painter bootstrap.
 pub const READER_CANVAS_ID: &str = "reader";

@@ -4,8 +4,8 @@ use leptos::prelude::*;
 use leptos_meta::{Link, Meta, Title};
 
 use crate::{
-    content::{url, OG_IMAGE_PATH, SITE_ORIGIN},
-    i18n::{t, Lang},
+    content::{OG_IMAGE_PATH, SITE_ORIGIN, url},
+    i18n::{Lang, t},
 };
 
 /// Emits the `<head>` tags for one page.

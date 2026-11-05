@@ -3,11 +3,11 @@
 #[cfg(feature = "ssr")]
 #[tokio::main]
 async fn main() {
-    use axum::{routing::get, Router};
+    use axum::{Router, routing::get};
     use leptos::prelude::*;
-    use leptos_axum::{generate_route_list_with_ssg, LeptosRoutes};
+    use leptos_axum::{LeptosRoutes, generate_route_list_with_ssg};
     use shenron_site::{
-        app::{shell, App},
+        app::{App, shell},
         server::{legacy_redirect, robots_txt, root_redirect, sitemap_xml},
     };
 

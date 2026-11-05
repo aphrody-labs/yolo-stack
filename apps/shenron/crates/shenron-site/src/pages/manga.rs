@@ -3,7 +3,7 @@ use leptos_router::hooks::use_params_map;
 
 use crate::{
     content::MANGA_VOLUMES,
-    i18n::{t, tf, Lang},
+    i18n::{Lang, t, tf},
     pages::with_lang,
     reader::ReaderIsland,
     seo::SeoHead,
