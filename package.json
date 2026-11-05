@@ -24,7 +24,12 @@
     "bench": "bun run bench/bench.ts",
     "bench:baseline": "bun run bench/bench.ts --target baseline",
     "cargo:check": "cargo check --workspace",
-    "cargo:test": "cargo test --workspace"
+    "cargo:test": "cargo test --workspace",
+    "next": "bun packages/yolo-next/src/cli.ts",
+    "next:analyze": "cargo run -p yolo-next -- analyze",
+    "next:migrate": "cargo run -p yolo-next -- migrate",
+    "next:test": "cargo test -p yolo-next && cd packages/yolo-next && bun test",
+    "fusion": "bun scripts/fusion.ts"
   },
   "devDependencies": {
     "@types/bun": "1.4.4",

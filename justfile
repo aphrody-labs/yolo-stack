@@ -64,3 +64,26 @@ release VERSION:
     just test
     git tag -a "v{{VERSION}}" -m "yolo-stack v{{VERSION}}"
     @echo "Tag v{{VERSION}} cree. Pousser avec : git push origin v{{VERSION}}"
+
+# --- yolo-next : compilateur de migration Next.js 16 -> Bun+TanStack / Dioxus / Leptos ---
+
+# Analyse un projet Next.js (config, routes, fonts, images, graphe RSC).
+next-analyze DIR:
+    cargo run -p yolo-next -- analyze "{{DIR}}" --json
+
+# Migre un projet Next.js vers une lane (bun | dioxus | leptos | all).
+next-migrate DIR OUT TARGET="all":
+    cargo run -p yolo-next -- migrate "{{DIR}}" --out "{{OUT}}" --target "{{TARGET}}"
+
+# Tests du compilateur Rust et du runtime Bun @yolo-rs/next.
+next-test:
+    cargo test -p yolo-next
+    cd packages/yolo-next && bun test
+
+# CLI Bun du runtime (dev | build | start | analyze | migrate).
+next *ARGS:
+    bun packages/yolo-next/src/cli.ts {{ARGS}}
+
+# Fusion de la flotte (status | link | unlink | plan | submodule | subtree | doctor).
+fusion *ARGS:
+    bun scripts/fusion.ts {{ARGS}}

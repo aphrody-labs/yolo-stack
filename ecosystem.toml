@@ -1,0 +1,1556 @@
+# yolo-stack ecosystem manifest
+# One [[source]] per external item assessed in docs/ECOSYSTEM-COMBINATION.md.
+# kind: "repo" | "crate" | "npm" | "bun-builtin"
+# mode: "vendor-pin" | "npm-dep" | "cargo-dep" | "port-to-rust" | "shim" | "reject" | "builtin"
+# version: the value verified on the given date (npm latest, crates.io max_stable, git tag or
+#          "main@<last push date>" for repositories without a release relevant to us,
+#          Bun release for builtins).
+# `bun run scripts/ecosystem.ts` (task 10 of the combination document) reads this file with
+# Bun.TOML.parse and compares versions with Bun.semver.
+
+[ecosystem]
+verified = "2026-11-04"
+bun = "1.4.4"
+react = "19.3.1"
+oxc_crates = "0.157.0"
+rust_msrv_required_by_oxc = "1.97.0"
+document = "docs/ECOSYSTEM-COMBINATION.md"
+
+# ---------------------------------------------------------------------------
+# vercel-labs
+# ---------------------------------------------------------------------------
+
+[[source]]
+name = "agent-skills"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/agent-skills"
+version = "main@2026-10-28"
+license = "MIT (README; no LICENSE file detected by GitHub)"
+mode = "vendor-pin"
+role = "Review gates: react-best-practices, web-design-guidelines, writing-guidelines, composition-patterns, react-view-transitions, react-native-skills; mounted at repos/agent-skills and installed into .claude/skills"
+verified = "2026-11-04"
+
+[[source]]
+name = "web-interface-guidelines"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/web-interface-guidelines"
+version = "main@2026-10-05"
+license = "MIT"
+mode = "vendor-pin"
+role = "Rule source behind the web-design-guidelines skill; UI review reference for TSX and RSX output"
+verified = "2026-11-04"
+
+[[source]]
+name = "skills"
+org = "vercel-labs"
+kind = "npm"
+url = "https://www.npmjs.com/package/skills"
+version = "1.7.6"
+license = "MIT"
+mode = "npm-dep"
+role = "Dev tool: bunx skills add vercel-labs/agent-skills -a claude-code; bunx skills check in just skills-check"
+verified = "2026-11-04"
+
+[[source]]
+name = "agent-browser"
+org = "vercel-labs"
+kind = "npm"
+url = "https://github.com/vercel-labs/agent-browser"
+version = "0.41.2"
+license = "Apache-2.0"
+mode = "npm-dep"
+role = "Dev tool: agent-driven browser QA of apps/showcase-* via bunx agent-browser; Obscura engine ties to pillars/yolo-web"
+verified = "2026-11-04"
+
+[[source]]
+name = "@json-render/core"
+org = "vercel-labs"
+kind = "npm"
+url = "https://github.com/vercel-labs/json-render"
+version = "0.22.0"
+license = "Apache-2.0"
+mode = "npm-dep"
+role = "Generative UI: catalog, spec schema and SpecStream compiler bound to yolo-tokens presets"
+verified = "2026-11-04"
+
+[[source]]
+name = "@json-render/react"
+org = "vercel-labs"
+kind = "npm"
+url = "https://github.com/vercel-labs/json-render"
+version = "0.22.0"
+license = "Apache-2.0"
+mode = "npm-dep"
+role = "Generative UI React renderer; registry maps to @yolo-rs/next components; Dioxus renderer is a later port"
+verified = "2026-11-04"
+
+[[source]]
+name = "@json-render/image"
+org = "vercel-labs"
+kind = "npm"
+url = "https://github.com/vercel-labs/json-render"
+version = "0.22.0"
+license = "Apache-2.0"
+mode = "npm-dep"
+role = "Optional: spec to SVG/PNG via satori; shares the OG renderer of @yolo-rs/next/og"
+verified = "2026-11-04"
+
+[[source]]
+name = "mcp-handler"
+org = "vercel-labs"
+kind = "npm"
+url = "https://github.com/vercel-labs/mcp-handler"
+version = "2.3.0"
+license = "Apache-2.0"
+mode = "npm-dep"
+role = "Web-standard MCP request handler mounted on Bun.serve routes by @yolo-rs/next/mcp (Streamable HTTP, withMcpAuth)"
+verified = "2026-11-04"
+
+[[source]]
+name = "@modelcontextprotocol/server"
+org = "modelcontextprotocol"
+kind = "npm"
+url = "https://github.com/modelcontextprotocol/typescript-sdk"
+version = "2.4.0"
+license = "Apache-2.0"
+mode = "npm-dep"
+role = "Peer dependency of mcp-handler 2.x (MCP TypeScript SDK v2 server package)"
+verified = "2026-11-04"
+
+[[source]]
+name = "zod"
+org = "colinhacks"
+kind = "npm"
+url = "https://www.npmjs.com/package/zod"
+version = "4.6.7"
+license = "MIT"
+mode = "npm-dep"
+role = "Peer dependency of mcp-handler 2.x and @json-render/core"
+verified = "2026-11-04"
+
+[[source]]
+name = "next-view-transitions"
+org = "shuding (formerly listed under vercel-labs; 404 there)"
+kind = "npm"
+url = "https://github.com/shuding/next-view-transitions"
+version = "0.3.5"
+license = "MIT"
+mode = "reject"
+role = "Superseded by the stable React 19.3 ViewTransition and addTransitionType; last publish 2025-12-05"
+verified = "2026-11-04"
+
+[[source]]
+name = "agent-desktop"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/agent-desktop"
+version = "main@2026-11-04"
+license = "Apache-2.0"
+mode = "reject"
+role = "Computer-use CLI; outside the web framework"
+verified = "2026-11-04"
+
+[[source]]
+name = "portless"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/portless"
+version = "main@2026-11-04"
+license = "Apache-2.0"
+mode = "reject"
+role = "Named local URLs; Bun.serve fixed ports in justfile suffice"
+verified = "2026-11-04"
+
+[[source]]
+name = "deepsec"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/deepsec"
+version = "main@2026-11-04"
+license = "Apache-2.0"
+mode = "reject"
+role = "Agent-driven security harness; optional CI add-on only"
+verified = "2026-11-04"
+
+[[source]]
+name = "native"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/native"
+version = "main@2026-11-03"
+license = "Apache-2.0"
+mode = "reject"
+role = "Zig desktop toolkit; desktop belongs to yolo-ui (Dioxus 0.8, GPUI, WGPU)"
+verified = "2026-11-04"
+
+[[source]]
+name = "scriptc"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/scriptc"
+version = "main@2026-11-04"
+license = "Apache-2.0"
+mode = "reject"
+role = "TypeScript-to-native compiler; bun build --compile and Rust lanes cover it"
+verified = "2026-11-04"
+
+[[source]]
+name = "opensrc"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/opensrc"
+version = "main@2026-09-16"
+license = "Apache-2.0"
+mode = "reject"
+role = "Optional agent dev tool (npm source fetcher); not framework code"
+verified = "2026-11-04"
+
+[[source]]
+name = "vgpu"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/vgpu"
+version = "main@2026-10-16"
+license = "MIT"
+mode = "reject"
+role = "TS WebGPU library; yolo-gpu (WGPU 30, Rust) owns GPU; API coverage reference only"
+verified = "2026-11-04"
+
+[[source]]
+name = "dev3000"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/dev3000"
+version = "main@2026-10-30"
+license = "MIT"
+mode = "reject"
+role = "Dev timeline capture for Next; Bun dev server streams the browser console natively"
+verified = "2026-11-04"
+
+[[source]]
+name = "wterm"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/wterm"
+version = "main@2026-11-04"
+license = "Apache-2.0"
+mode = "reject"
+role = "Web terminal; Bun.Terminal plus yolo-ui components"
+verified = "2026-11-04"
+
+[[source]]
+name = "just-bash"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/just-bash"
+version = "main@2026-10-27"
+license = "none"
+mode = "reject"
+role = "Bash for agents in TS; Bun ships the $ shell"
+verified = "2026-11-04"
+
+[[source]]
+name = "webreel"
+org = "vercel-labs"
+kind = "repo"
+url = "https://github.com/vercel-labs/webreel"
+version = "main@2026-09-16"
+license = "Apache-2.0"
+mode = "reject"
+role = "Scripted browser demo recorder; Bun.WebView screenshots cover stills"
+verified = "2026-11-04"
+
+# ---------------------------------------------------------------------------
+# vercel
+# ---------------------------------------------------------------------------
+
+[[source]]
+name = "next.js"
+org = "vercel"
+kind = "repo"
+url = "https://github.com/vercel/next.js"
+version = "v16.4.5"
+license = "MIT"
+mode = "port-to-rust"
+role = "Behavioural reference for crates/yolo-next (App Router, RSC, Server Actions, next/font, next/image, next.config); next/* surface shimmed; never a dependency"
+verified = "2026-11-04"
+
+[[source]]
+name = "next"
+org = "vercel"
+kind = "npm"
+url = "https://www.npmjs.com/package/next"
+version = "16.4.5"
+license = "MIT"
+mode = "reject"
+role = "Not installed; apps/next-fixture keeps source trees only"
+verified = "2026-11-04"
+
+[[source]]
+name = "turborepo"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/turborepo"
+version = "2.11.10"
+license = "MIT"
+mode = "reject"
+role = "Replaced by just recipes, Bun workspaces (bun run --filter), cargo and sccache; no remote cache needed"
+verified = "2026-11-04"
+
+[[source]]
+name = "swr"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/swr"
+version = "2.5.1"
+license = "MIT"
+mode = "npm-dep"
+role = "Compatibility export @yolo-rs/next/shims/swr next to TanStack Query"
+verified = "2026-11-04"
+
+[[source]]
+name = "ai"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/ai"
+version = "7.0.162"
+license = "Apache-2.0 (npm); GitHub detects NOASSERTION"
+mode = "npm-dep"
+role = "AI SDK adapter lane inside pillars/yolo-ai only; not imported by @yolo-rs/next"
+verified = "2026-11-04"
+
+[[source]]
+name = "@ai-sdk/react"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/ai"
+version = "4.0.166"
+license = "Apache-2.0"
+mode = "npm-dep"
+role = "React hooks of the AI SDK adapter lane (depends on swr)"
+verified = "2026-11-04"
+
+[[source]]
+name = "satori"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/satori"
+version = "0.63.2"
+license = "MPL-2.0"
+mode = "npm-dep"
+role = "JSX to SVG for @yolo-rs/next/og ImageResponse; verified on Bun 1.4.4 stable and canary (win32 x64)"
+verified = "2026-11-04"
+
+[[source]]
+name = "@resvg/resvg-wasm"
+org = "thx (resvg-js)"
+kind = "npm"
+url = "https://github.com/thx/resvg-js"
+version = "2.6.2"
+license = "MPL-2.0"
+mode = "npm-dep"
+role = "Default SVG rasterizer for @yolo-rs/next/og; portable inside bun build --compile; verified on Bun 1.4.4"
+verified = "2026-11-04"
+
+[[source]]
+name = "@resvg/resvg-js"
+org = "thx (resvg-js)"
+kind = "npm"
+url = "https://github.com/thx/resvg-js"
+version = "2.6.2"
+license = "MPL-2.0"
+mode = "npm-dep"
+role = "Opt-in native rasterizer (YOLO_OG_RENDERER=native); prebuilt win32-x64-msvc and linux-x64-gnu bindings; verified on Bun 1.4.4"
+verified = "2026-11-04"
+
+[[source]]
+name = "@vercel/og"
+org = "vercel"
+kind = "npm"
+url = "https://www.npmjs.com/package/@vercel/og"
+version = "1.0.3"
+license = "MPL-2.0"
+mode = "reject"
+role = "index.node.js aborts with ENOENT dist/hb.wasm (file missing from the tarball); replaced by satori + resvg in @yolo-rs/next/og"
+verified = "2026-11-04"
+
+[[source]]
+name = "resvg"
+org = "linebender"
+kind = "crate"
+url = "https://github.com/linebender/resvg"
+version = "0.49.0"
+license = "Apache-2.0 OR MIT"
+mode = "cargo-dep"
+role = "Optional Rust OG rasterizer in crates/yolo-next when the OG route runs in the Rust server (with usvg 0.49.0, tiny-skia 0.12.0, fontdb 0.24.0)"
+verified = "2026-11-04"
+
+[[source]]
+name = "geist"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/geist-font"
+version = "1.9.1"
+license = "OFL-1.1"
+mode = "npm-dep"
+role = "Optional preset font (Neutral preset): Geist Sans, Mono, Pixel, Serif TTFs under geist/dist/fonts; self-hosted via @yolo-rs/next/shims/font-local"
+verified = "2026-11-04"
+
+[[source]]
+name = "edge-runtime"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/edge-runtime"
+version = "4.0.1"
+license = "MIT"
+mode = "reject"
+role = "Web-standard runtime semantics are native in Bun; conformance reference only; @edge-runtime/cookies arrives transitively with flags"
+verified = "2026-11-04"
+
+[[source]]
+name = "@vercel/nft"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/nft"
+version = "1.11.0"
+license = "MIT"
+mode = "reject"
+role = "Node file tracing; replaced by Bun.build and bun build --compile"
+verified = "2026-11-04"
+
+[[source]]
+name = "@vercel/ncc"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/ncc"
+version = "0.45.0"
+license = "MIT"
+mode = "reject"
+role = "Single-file Node bundling; replaced by Bun.build"
+verified = "2026-11-04"
+
+[[source]]
+name = "pkg"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/pkg"
+version = "5.8.1"
+license = "MIT"
+mode = "reject"
+role = "Archived 2024-01-03 and deprecated; replaced by bun build --compile"
+verified = "2026-11-04"
+
+[[source]]
+name = "@vercel/analytics"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/analytics"
+version = "2.0.1"
+license = "MIT"
+mode = "shim"
+role = "@yolo-rs/next/shims/analytics: inert off-Vercel, optional self-hosted collector on Bun.serve + bun:sqlite"
+verified = "2026-11-04"
+
+[[source]]
+name = "@vercel/speed-insights"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/speed-insights"
+version = "2.0.0"
+license = "Apache-2.0 (npm); repository MIT"
+mode = "shim"
+role = "@yolo-rs/next/shims/speed-insights: web-vitals payloads to the same collector"
+verified = "2026-11-04"
+
+[[source]]
+name = "flags"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/flags"
+version = "4.4.0"
+license = "MIT"
+mode = "shim"
+role = "flags core consumed from npm; flags/next adapter re-implemented in @yolo-rs/next/shims/flags on Bun.CookieMap and Bun.CSRF"
+verified = "2026-11-04"
+
+[[source]]
+name = "examples"
+org = "vercel"
+kind = "repo"
+url = "https://github.com/vercel/examples"
+version = "main@2026-11-04"
+license = "MIT"
+mode = "reject"
+role = "Reference corpus; selected app/ trees copied into apps/next-fixture as migration tests"
+verified = "2026-11-04"
+
+[[source]]
+name = "next-learn"
+org = "vercel"
+kind = "repo"
+url = "https://github.com/vercel/next-learn"
+version = "main@2026-07-29"
+license = "MIT"
+mode = "reject"
+role = "Reference fixture (dashboard app) for yolo-next migrate"
+verified = "2026-11-04"
+
+[[source]]
+name = "styled-jsx"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/styled-jsx"
+version = "5.1.7"
+license = "MIT"
+mode = "reject"
+role = "Requires a Babel/SWC transform and violates the zero-raw-CSS policy; yolo-tokens plus CSS modules via Bun"
+verified = "2026-11-04"
+
+[[source]]
+name = "og-image"
+org = "vercel"
+kind = "repo"
+url = "https://github.com/vercel/og-image"
+version = "main@2023-01-20"
+license = "MIT"
+mode = "reject"
+role = "Archived; README says Node 14 only; superseded by satori"
+verified = "2026-11-04"
+
+[[source]]
+name = "hyper"
+org = "vercel"
+kind = "repo"
+url = "https://github.com/vercel/hyper"
+version = "canary@2026-11-04"
+license = "MIT"
+mode = "reject"
+role = "Archived Electron terminal"
+verified = "2026-11-04"
+
+[[source]]
+name = "micro"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/micro"
+version = "10.0.1"
+license = "MIT"
+mode = "reject"
+role = "Node HTTP microservices; Bun.serve routes"
+verified = "2026-11-04"
+
+[[source]]
+name = "serve"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/serve"
+version = "14.2.6"
+license = "MIT"
+mode = "reject"
+role = "Static serving; Bun.serve static and HTML routes"
+verified = "2026-11-04"
+
+[[source]]
+name = "ms"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/ms"
+version = "2.1.3"
+license = "MIT"
+mode = "reject"
+role = "Trivial utility re-implemented in packages/yolo-next/src/utils/ms.ts"
+verified = "2026-11-04"
+
+[[source]]
+name = "async-sema"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/async-sema"
+version = "3.1.1"
+license = "MIT"
+mode = "reject"
+role = "Trivial semaphore re-implemented locally; tokio::sync::Semaphore on the Rust side"
+verified = "2026-11-04"
+
+[[source]]
+name = "streamdown"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/streamdown"
+version = "2.7.1"
+license = "Apache-2.0 (npm); GitHub detects NOASSERTION"
+mode = "reject"
+role = "Bun.markdown.react() is built in (unstable); revisit only for streaming-specific rendering"
+verified = "2026-11-04"
+
+[[source]]
+name = "vercel"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/vercel"
+version = "65.11.0"
+license = "Apache-2.0"
+mode = "reject"
+role = "Platform CLI; deployment target is yolo-vps; deploy-to-vercel skill stays optional"
+verified = "2026-11-04"
+
+[[source]]
+name = "workflow"
+org = "vercel"
+kind = "npm"
+url = "https://github.com/vercel/workflow"
+version = "5.4.0"
+license = "Apache-2.0"
+mode = "reject"
+role = "Durable workflows; out of scope (Bun.cron and bun:sqlite queues)"
+verified = "2026-11-04"
+
+[[source]]
+name = "chatbot"
+org = "vercel"
+kind = "repo"
+url = "https://github.com/vercel/chatbot"
+version = "main@2026-11-03"
+license = "NOASSERTION"
+mode = "reject"
+role = "Template; reference for RSC plus AI SDK patterns"
+verified = "2026-11-04"
+
+[[source]]
+name = "eve"
+org = "vercel"
+kind = "repo"
+url = "https://github.com/vercel/eve"
+version = "main@2026-11-04"
+license = "Apache-2.0"
+mode = "reject"
+role = "Agent framework; pillars/yolo-ai decides separately"
+verified = "2026-11-04"
+
+# ---------------------------------------------------------------------------
+# React (runtime peer of @yolo-rs/next)
+# ---------------------------------------------------------------------------
+
+[[source]]
+name = "react"
+org = "react"
+kind = "npm"
+url = "https://github.com/react/react"
+version = "19.3.1"
+license = "MIT"
+mode = "npm-dep"
+role = "Peer of @yolo-rs/next; stable ViewTransition, addTransitionType, Activity, useEffectEvent, cacheSignal verified in exports"
+verified = "2026-11-04"
+
+[[source]]
+name = "react-dom"
+org = "react"
+kind = "npm"
+url = "https://github.com/react/react"
+version = "19.3.1"
+license = "MIT"
+mode = "npm-dep"
+role = "Peer of @yolo-rs/next (browser(), Trusted Types support per the 19.3 release notes)"
+verified = "2026-11-04"
+
+[[source]]
+name = "react-server-dom-parcel"
+org = "react"
+kind = "npm"
+url = "https://github.com/react/react"
+version = "19.3.1"
+license = "MIT"
+mode = "npm-dep"
+role = "Flight (RSC) protocol implementation used by @yolo-rs/next/rsc on Bun"
+verified = "2026-11-04"
+
+[[source]]
+name = "react-refresh"
+org = "react"
+kind = "npm"
+url = "https://github.com/react/react"
+version = "0.19.0"
+license = "MIT"
+mode = "npm-dep"
+role = "Dev-only runtime for the $RefreshReg$/$RefreshSig$ calls emitted by oxc JSX refresh"
+verified = "2026-11-04"
+
+[[source]]
+name = "@tanstack/react-router"
+org = "TanStack"
+kind = "npm"
+url = "https://github.com/TanStack/router"
+version = "1.170.46"
+license = "MIT"
+mode = "npm-dep"
+role = "Client router of the TanStack shell (@yolo-rs/stack-tanstack)"
+verified = "2026-11-04"
+
+[[source]]
+name = "@tanstack/react-query"
+org = "TanStack"
+kind = "npm"
+url = "https://github.com/TanStack/query"
+version = "5.106.0"
+license = "MIT"
+mode = "npm-dep"
+role = "Primary data layer; swr is the compatibility export"
+verified = "2026-11-04"
+
+# ---------------------------------------------------------------------------
+# oxc-project: repositories
+# ---------------------------------------------------------------------------
+
+[[source]]
+name = "oxc"
+org = "oxc-project"
+kind = "repo"
+url = "https://github.com/oxc-project/oxc"
+version = "crates_v0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "Monorepo of the oxc crates, oxlint and oxfmt; releases crates_v0.157.0 (2026-11-02), oxlint_v1.91.0 and oxfmt_v0.76.0 (2026-11-03)"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc-resolver"
+org = "oxc-project"
+kind = "repo"
+url = "https://github.com/oxc-project/oxc-resolver"
+version = "main@2026-11-04"
+license = "MIT"
+mode = "cargo-dep"
+role = "enhanced-resolve port; crate 11.24.3 and npm 11.24.2"
+verified = "2026-11-04"
+
+[[source]]
+name = "tsgolint"
+org = "oxc-project"
+kind = "repo"
+url = "https://github.com/oxc-project/tsgolint"
+version = "main@2026-10-26"
+license = "MIT"
+mode = "reject"
+role = "Go type-aware linting for oxlint; optional via npm oxlint-tsgolint, not built here"
+verified = "2026-11-04"
+
+[[source]]
+name = "tsrs"
+org = "oxc-project"
+kind = "repo"
+url = "https://github.com/oxc-project/tsrs"
+version = "main@2026-11-04"
+license = "Apache-2.0"
+mode = "reject"
+role = "Rust port of the TypeScript 7 checker; watch for a future Rust type-aware lane"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc-walker"
+org = "oxc-project"
+kind = "npm"
+url = "https://github.com/oxc-project/oxc-walker"
+version = "1.1.1"
+license = "MIT"
+mode = "reject"
+role = "estree-walker over oxc ASTs; optional for scripts/*.ts passes, not required"
+verified = "2026-11-04"
+
+[[source]]
+name = "bench-javascript-parser-written-in-rust"
+org = "oxc-project"
+kind = "repo"
+url = "https://github.com/oxc-project/bench-javascript-parser-written-in-rust"
+version = "main@2026-11-03"
+license = "none"
+mode = "reject"
+role = "Parser benchmark (the javascript-parser-benchmark repository); quoted numbers only"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc-browserslist"
+org = "oxc-project"
+kind = "crate"
+url = "https://github.com/oxc-project/oxc-browserslist"
+version = "5.0.1"
+license = "MIT"
+mode = "cargo-dep"
+role = "Transitive through oxc_transformer target resolution"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_sourcemap"
+org = "oxc-project"
+kind = "crate"
+url = "https://github.com/oxc-project/oxc-sourcemap"
+version = "9.0.0"
+license = "BSD-3-Clause"
+mode = "cargo-dep"
+role = "Transitive through oxc_codegen (CodegenReturn.map); deny.toml must allow BSD-3-Clause"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc-miette"
+org = "oxc-project"
+kind = "crate"
+url = "https://github.com/oxc-project/oxc-miette"
+version = "4.0.0"
+license = "Apache-2.0"
+mode = "cargo-dep"
+role = "Transitive through oxc_diagnostics; repository archived 2026-08-11"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc-vscode"
+org = "oxc-project"
+kind = "repo"
+url = "https://github.com/oxc-project/oxc-vscode"
+version = "main@2026-11-01"
+license = "MIT"
+mode = "reject"
+role = "Editor extension; developer choice, not framework code"
+verified = "2026-11-04"
+
+[[source]]
+name = "backlog"
+org = "oxc-project"
+kind = "repo"
+url = "https://github.com/oxc-project/backlog"
+version = "main@2026-08-14"
+license = "none"
+mode = "reject"
+role = "Collaborator-only backlog"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc-node"
+org = "oxc-project"
+kind = "repo"
+url = "https://github.com/oxc-project/oxc-node"
+version = "main@2026-11-04"
+license = "none"
+mode = "reject"
+role = "TypeScript loader for Node.js; Bun runs TypeScript natively"
+verified = "2026-11-04"
+
+# ---------------------------------------------------------------------------
+# oxc-project: crates.io
+# ---------------------------------------------------------------------------
+
+[[source]]
+name = "oxc_parser"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_parser"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "Parser (yolo-ui and crates/yolo-next currently pin 0.155.0; bump to 0.157 with MSRV 1.97)"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_ast"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_ast"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "AST and builder (oxc_ast::builder::AstBuilder, Statement::new_export_declaration)"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_ast_visit"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_ast_visit"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "VisitMut and walk_mut for the next/* import rewrite pass"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_semantic"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_semantic"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "SemanticBuilder::new().build(&program).semantic.into_scoping() before Transformer"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_transformer"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_transformer"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "Transformer::new(&allocator, path, &TransformOptions).build_with_scoping(scoping, &mut program): TS strip, JSX automatic runtime, react-refresh"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_codegen"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_codegen"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "Codegen::new().with_options(CodegenOptions).build(&program) -> CodegenReturn { code, map }"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_minifier"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_minifier"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "Production minification in the Rust build lane"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_mangler"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_mangler"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "Identifier mangling with oxc_minifier"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_isolated_declarations"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_isolated_declarations"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = ".d.ts emission for @yolo-rs/next without tsc"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_traverse"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_traverse"
+version = "0.157.0"
+license = "MIT"
+mode = "reject"
+role = "traverse_mut(&mut tr, &allocator, &mut program, scoping, state) compiles, but it is an internal transformer crate; use oxc_ast_visit::VisitMut"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_span"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_span"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "Span, SourceType, SPAN"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_allocator"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_allocator"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "Arena allocator, Box and Vec (Vec::new_in takes &impl GetAllocator)"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_diagnostics"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_diagnostics"
+version = "0.157.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "Diagnostics (Deref to Vec<OxcDiagnostic>) returned as ParserReturn.diagnostics and TransformerReturn.diagnostics"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_resolver"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_resolver"
+version = "11.24.3"
+license = "MIT"
+mode = "cargo-dep"
+role = "tsconfig paths and package exports resolution inside crates/yolo-next"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_napi"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_napi"
+version = "0.157.0"
+license = "MIT"
+mode = "reject"
+role = "Rust side of the official npm bindings; template for crates/yolo-next-bun-plugin, not a dependency"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc_linter"
+org = "oxc-project"
+kind = "crate"
+url = "https://crates.io/crates/oxc_linter"
+version = "not published (HTTP 404)"
+license = "MIT"
+mode = "reject"
+role = "oxlint is distributed as an npm binary only; bun lint is native"
+verified = "2026-11-04"
+
+# ---------------------------------------------------------------------------
+# oxc-project: npm
+# ---------------------------------------------------------------------------
+
+[[source]]
+name = "oxc-transform"
+org = "oxc-project"
+kind = "npm"
+url = "https://www.npmjs.com/package/oxc-transform"
+version = "0.157.0"
+license = "MIT"
+mode = "npm-dep"
+role = "Bun plugin onLoad transform (transform() async, transformSync()); prebuilt @oxc-transform/binding-win32-x64-msvc and linux-x64-gnu; verified under Bun 1.4.4"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc-parser"
+org = "oxc-project"
+kind = "npm"
+url = "https://www.npmjs.com/package/oxc-parser"
+version = "0.157.0"
+license = "MIT"
+mode = "npm-dep"
+role = "parseSync for boundary scans in scripts and tests; verified under Bun 1.4.4"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc-minify"
+org = "oxc-project"
+kind = "npm"
+url = "https://www.npmjs.com/package/oxc-minify"
+version = "0.157.0"
+license = "MIT"
+mode = "npm-dep"
+role = "Optional minifier for Bun.build pipelines (minify() async, minifySync()); verified under Bun 1.4.4"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxc-resolver"
+org = "oxc-project"
+kind = "npm"
+url = "https://www.npmjs.com/package/oxc-resolver"
+version = "11.24.2"
+license = "MIT"
+mode = "npm-dep"
+role = "ResolverFactory for tsconfig paths inside the Bun plugin; verified under Bun 1.4.4"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxlint"
+org = "oxc-project"
+kind = "npm"
+url = "https://www.npmjs.com/package/oxlint"
+version = "1.91.0"
+license = "MIT"
+mode = "npm-dep"
+role = "CI cross-check next to bun lint (bunx oxlint@1.91.0); @oxlint/binding-win32-x64-msvc and linux-x64-gnu"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxfmt"
+org = "oxc-project"
+kind = "npm"
+url = "https://www.npmjs.com/package/oxfmt"
+version = "0.76.0"
+license = "MIT"
+mode = "npm-dep"
+role = "CI cross-check next to bun fmt (bunx oxfmt@0.76.0 --check); @oxfmt/binding-win32-x64-msvc and linux-x64-gnu"
+verified = "2026-11-04"
+
+[[source]]
+name = "oxlint-tsgolint"
+org = "oxc-project"
+kind = "npm"
+url = "https://www.npmjs.com/package/oxlint-tsgolint"
+version = "7.0.2005"
+license = "MIT"
+mode = "reject"
+role = "Optional type-aware lint (Go binary, @oxlint-tsgolint/win32-x64 and linux-x64); bun check covers types"
+verified = "2026-11-04"
+
+[[source]]
+name = "@oxc-project/types"
+org = "oxc-project"
+kind = "npm"
+url = "https://www.npmjs.com/package/@oxc-project/types"
+version = "0.157.0"
+license = "MIT"
+mode = "npm-dep"
+role = "AST typings for oxc-parser consumers"
+verified = "2026-11-04"
+
+# ---------------------------------------------------------------------------
+# Bun: runtime, crates, plugins
+# ---------------------------------------------------------------------------
+
+[[source]]
+name = "bun"
+org = "oven-sh"
+kind = "repo"
+url = "https://github.com/oven-sh/bun"
+version = "bun-v1.4.4"
+license = "NOASSERTION (MIT core with vendored components)"
+mode = "builtin"
+role = "Runtime, bundler, test runner, package manager; Cargo workspace (134 src/* members, edition 2024) with JavaScriptCore C++ bindings; release 2026-10-22"
+verified = "2026-11-04"
+
+[[source]]
+name = "bun-types"
+org = "oven-sh"
+kind = "npm"
+url = "https://www.npmjs.com/package/bun-types"
+version = "1.4.4"
+license = "MIT"
+mode = "npm-dep"
+role = "Typings and bundled docs (docs/**/*.mdx) used to verify the API surface"
+verified = "2026-11-04"
+
+[[source]]
+name = "@types/bun"
+org = "oven-sh"
+kind = "npm"
+url = "https://www.npmjs.com/package/@types/bun"
+version = "1.4.4"
+license = "MIT"
+mode = "npm-dep"
+role = "Already pinned in package.json devDependencies"
+verified = "2026-11-04"
+
+[[source]]
+name = "bun-native-plugin"
+org = "oven-sh"
+kind = "crate"
+url = "https://crates.io/crates/bun-native-plugin"
+version = "0.2.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "onBeforeParse native plugin wrapper (define_bun_plugin!, #[bun], OnBeforeParse); verified cdylib build and load on Windows x64 under Bun 1.4.4 stable and canary"
+verified = "2026-11-04"
+
+[[source]]
+name = "bun-macro"
+org = "oven-sh"
+kind = "crate"
+url = "https://crates.io/crates/bun-macro"
+version = "0.1.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "Proc macro #[bun] generating the extern C onBeforeParse entry point"
+verified = "2026-11-04"
+
+[[source]]
+name = "napi"
+org = "napi-rs"
+kind = "crate"
+url = "https://crates.io/crates/napi"
+version = "3.16.1"
+license = "MIT"
+mode = "cargo-dep"
+role = "Node-API runtime for the native plugin cdylib (default-features = false, features = [napi4]); Bun 1.4.4 reports napi version 10"
+verified = "2026-11-04"
+
+[[source]]
+name = "napi-derive"
+org = "napi-rs"
+kind = "crate"
+url = "https://crates.io/crates/napi-derive"
+version = "3.7.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "#[napi] used by define_bun_plugin! (bun_plugin_register)"
+verified = "2026-11-04"
+
+[[source]]
+name = "napi-build"
+org = "napi-rs"
+kind = "crate"
+url = "https://crates.io/crates/napi-build"
+version = "2.6.0"
+license = "MIT"
+mode = "cargo-dep"
+role = "build.rs helper (napi_build::setup()) for the native plugin"
+verified = "2026-11-04"
+
+[[source]]
+name = "bun-plugin-tailwind"
+org = "oven-sh (published by zackradisic)"
+kind = "npm"
+url = "https://www.npmjs.com/package/bun-plugin-tailwind"
+version = "0.1.2"
+license = "MIT"
+mode = "reject"
+role = "Tailwind is banned; reference implementation of a [serve.static] plugin"
+verified = "2026-11-04"
+
+[[source]]
+name = "bun-plugin-svelte"
+org = "oven-sh"
+kind = "npm"
+url = "https://github.com/oven-sh/bun/tree/main/packages/bun-plugin-svelte"
+version = "0.0.6"
+license = "MIT"
+mode = "reject"
+role = "No Svelte in yolo-stack"
+verified = "2026-11-04"
+
+[[source]]
+name = "bun-plugin-yaml"
+org = "third party (npm); sample in oven-sh/bun/packages"
+kind = "npm"
+url = "https://www.npmjs.com/package/bun-plugin-yaml"
+version = "0.0.1"
+license = "unknown"
+mode = "reject"
+role = "Obsolete: .yaml imports and Bun.YAML are built in"
+verified = "2026-11-04"
+
+# ---------------------------------------------------------------------------
+# Bun built-ins (all present on Bun 1.4.4 stable and canary; see section C.3)
+# ---------------------------------------------------------------------------
+
+[[source]]
+name = "bun:sqlite"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/sqlite"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "OG and image caches, analytics collector, flag overrides"
+verified = "2026-11-04"
+
+[[source]]
+name = "bun:ffi"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/ffi"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "Optional napi-free bridge to crates/yolo-next (dlopen, cc)"
+verified = "2026-11-04"
+
+[[source]]
+name = "bun:jsc"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/reference/bun/jsc"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "Heap stats and serialize/deserialize for bench/ and caches"
+verified = "2026-11-04"
+
+[[source]]
+name = "bun:test"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/test"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "All package tests"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.serve routes"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/http/routing"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "App Router host: routes object, BunRequest<path>, HTML imports, per-method handlers, server.reload"
+verified = "2026-11-04"
+
+[[source]]
+name = "[serve.static] plugins"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/bundler/fullstack"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "bunfig.toml plugin list applied to HTML and static route bundles (loads @yolo-rs/next/plugin)"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.build"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/bundler"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "Three-pass build (server, client, RSC); compile and bytecode options for single-binary deploys"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.plugin"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/bundler/plugins"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "onResolve, onLoad, onStart, onEnd, onBeforeParse (native) hooks for the OXC plugin"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.Transpiler"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/transpiler"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "scanImports for use client / use server boundary detection without oxc"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.S3Client"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/s3"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "CDN output target of @yolo-rs/next/cdn"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.CookieMap"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/cookies"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "cookies() in @yolo-rs/next/headers; flag overrides"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.CSRF"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/csrf"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "Server Action POST protection (generate/verify with sessionId)"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.Image"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/image"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "next/image replacement: resize (fit, filter), rotate/flip, jpeg/png/webp (heic/avif on macOS and Windows), placeholder (ThumbHash), metadata, backend = bun for byte-identical output"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.markdown"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/markdown"
+version = "1.4.4 (unstable API)"
+license = "MIT"
+mode = "builtin"
+role = "html(), ansi(), render(), react() for content routes; feature-flagged"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.YAML"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/yaml"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "parse/stringify for config files"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.TOML"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/toml"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "parse/stringify; loads fusion.toml and ecosystem.toml"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.color"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/color"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "CSS-parser-backed color normalization ahead of HCT/CAM16 in yolo-tokens emitters"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.WebView"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/webview"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "Headless browser (WKWebView on macOS, CDP Chrome/Edge elsewhere) for screenshot gates"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.cron"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/cron"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "In-process and OS-level schedules for revalidation and cache sweeps"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.Terminal"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/child-process"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "PTY for yolo-next dev panes and bench runners"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.redis"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/redis"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "Session store option (RedisClient, Valkey protocol)"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.SQL"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/sql"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "Postgres and MySQL client for Server Actions"
+verified = "2026-11-04"
+
+[[source]]
+name = "HTMLRewriter"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/html-rewriter"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "Streaming injection of RSC payload, preloads and nonces into HTML shells"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.password"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/hashing"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "argon2id/bcrypt helpers for auth examples"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.semver"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/semver"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "satisfies/order for the ecosystem doctor"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.Glob"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/glob"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "App Router file discovery"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.ModuleGraph"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/module-graph"
+version = "1.4.4 (experimental)"
+license = "MIT"
+mode = "builtin"
+role = "Per-tenant or per-request module isolation for RSC renders; replaces @edge-runtime/vm; feature-flagged"
+verified = "2026-11-04"
+
+[[source]]
+name = "Bun.secrets"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/runtime/secrets"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "OS credential store for CDN and S3 keys on developer machines"
+verified = "2026-11-04"
+
+[[source]]
+name = "bun build --compile"
+org = "oven-sh"
+kind = "bun-builtin"
+url = "https://bun.com/docs/bundler/executables"
+version = "1.4.4"
+license = "MIT"
+mode = "builtin"
+role = "Single-binary deploys (targets bun-linux-x64, bun-windows-x64, bun-darwin-arm64 and more; --bytecode, --minify, --sourcemap); no public aot flag documented"
+verified = "2026-11-04"
