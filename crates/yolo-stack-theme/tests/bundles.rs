@@ -161,7 +161,7 @@ fn dtcg_and_native_agree_with_roles() {
         format!("#{r:02x}{g:02x}{b:02x}"),
         t.role(true, "primary").expect("role")
     );
-    assert_eq!(native.colors.len(), 49);
+    assert_eq!(native.colors.len(), 50);
 }
 
 #[test]
@@ -290,6 +290,6 @@ proptest! {
                 prop_assert!(r.pass, "{} on {} = {} (min {})", r.fg, r.bg, r.ratio, r.min);
             }
         }
-        prop_assert_eq!(t.light.len(), 49);
+        prop_assert_eq!(t.light.len(), 50);
     }
 }

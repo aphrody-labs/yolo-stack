@@ -12,8 +12,8 @@ Exigence du propriétaire : « un thème doit tout changer d'un coup, pas seulem
 Faits :
 
 - Les couleurs de `apps/shenron/crates/shenron-site/src/tokens.rs` étaient deux tables de valeurs hexadécimales écrites à la main.
-- Le moteur HCT/CAM16 existe déjà dans `yolo-tokens` (yolo-ui), avec 49 rôles M3 et neuf variantes de schéma.
-- yolo-ui définit déjà le format de thème complet dans `crates/yolo-theme-pack` (branche `claude-theme-packs`, commit c878148 puis 5fdee4a13) : manifeste `theme.toml` (titres, logo, icônes, wallpapers avec licence, pet, polices OFL, forme du shell, densité, rayons, verre, mouvement), `UserPrefs`, résolution HCT vers CSS, attributs `data-*`, wallpaper SVG génératif, importeur Omarchy.
+- Le moteur HCT/CAM16 existe déjà dans `yolo-tokens` (yolo-ui), avec 50 rôles (49 M3 plus `focus-ring`) et neuf variantes de schéma.
+- yolo-ui définit déjà le format de thème complet dans `crates/yolo-theme-pack` : manifeste `theme.toml` (titres, logo, icônes, wallpapers avec licence, pet, polices OFL, forme du shell, densité, rayons, verre, mouvement), `UserPrefs`, résolution HCT vers CSS, attributs `data-*`, wallpaper SVG génératif, importeur Omarchy.
 - Les presets `YoloThemePreset` (neutral, m3, fluent, apple, omarchy et ses 23 sous thèmes, hyprland, aphrody, chromium) et `ByronLovePetSpec` restent la référence de forme pour les autres produits ; Shenron n'en reprend que le principe (graine, pet, tokens), pas les valeurs.
 - `shenron-admin-ai` (branche `claude-admin-ai`) calcule aujourd'hui ses propres couleurs dans un module privé.
 
@@ -50,7 +50,7 @@ Chaque fichier est adressé par son contenu : `{cdn}/{sha256 sur 16 caractères}
 
 ### Couleurs
 
-- Aucune couleur stockée : la graine (teinte, chroma) et la variante (`tonal-spot`, `vibrant`, `expressive`, `fidelity`, `monochrome`, ...) produisent les 49 rôles clairs et sombres par `yolo-tokens`.
+- Aucune couleur stockée : la graine (teinte, chroma) et la variante (`tonal-spot`, `vibrant`, `expressive`, `fidelity`, `monochrome`, ...) produisent les 50 rôles clairs et sombres par `yolo-tokens`.
 - Réglages utilisateur (`UserThemePrefs`) : bundle, teinte, chroma, niveau de contraste, variante, clair, sombre ou système, mouvement réduit, pet activé, choix du wallpaper, surcharge par rôle.
 - Zéro hexadécimal dans les composants : test `tests/no_hex.rs` du site.
 
@@ -80,45 +80,6 @@ Appliquées à chaque `compute`, dans les deux schemes :
 - Route `/{lang}/theme` : réglages (graine, chroma, contraste, variante, surcharges par rôle) avec aperçu vivant et audit de contraste.
 - Les règles d'accessibilité (`:focus-visible`, `forced-colors`, `prefers-reduced-motion`) vivent dans `src/structure.rs`. La branche `claude-site-a11y` modifie la même zone : à la fusion, garder les règles de cette branche dans `structure.rs`.
 
-## Dépendance à yolo-ui et contournement vps
+## Dépendance à yolo-ui
 
-Comme pour `yolo-tokens`, `yolo-theme-pack` est une dépendance par chemin `../yolo-ui/crates/yolo-theme-pack` (workspace racine). Sur vps le snapshot de yolo-ui suit `main`, où ce crate n'existe pas avant la fusion de `claude-theme-packs`. Contournement utilisé pour les vérifications : un checkout séparé de yolo-ui (branche `claude-theme-packs`, commit 5fdee4a13) posé à côté de yolo-stack dans `~/src/yolo-work/theme/`, sans toucher au `main` de yolo-ui. De plus, le membre `crates/yolo-next` du workspace racine a été retiré de la copie vps seulement, car il exige des sous modules de yolo-ui absents du snapshot ; `Cargo.lock` n'est donc pas régénéré dans ce commit.
-
-## Migration de `shenron-admin-ai`
-
-À faire après fusion des branches, sans modifier `claude-admin-ai` ici :
-
-1. Ajouter `yolo-stack-theme = { path = "../../../../crates/yolo-stack-theme" }` (ou via le workspace racine).
-2. Remplacer le module privé de dérivation de couleurs par `compute(&bundle, &prefs)`, en chargeant les bundles de `apps/shenron/themes` avec `ThemeBundle::from_strs` (embarqués par `include_str!`, comme `shenron-site/src/themes.rs`).
-3. Servir `emit::css(&resolved)` pour le CSS et `ResolvedBundle::native(dark)` si l'admin a une vue native.
-4. Lire et écrire les préférences avec `UserThemePrefs::to_cookie_value` et `from_cookie_value`, même cookie `shenron_theme` : un choix fait sur le site s'applique à l'admin.
-5. Supprimer les couleurs en dur de l'admin ; réutiliser `tests/no_hex.rs` comme garde.
-6. Les surcharges de rôle de l'admin passent par `UserThemePrefs.overrides` : le recontrôle de contraste est déjà fait.
-
-## Écarts de yolo-theme-pack
-
-Consignés dans `docs/research/theme-pack-gaps.md` pour yolo-ui : surcharges avec recontrôle AA et rejet, sons, police d'en-tête, wallpapers par point de rupture, empreintes de contenu des assets, pet vectoriel avec comportements, portes UI 3:1, paramètres HCT (teinte et chroma) et variantes nommées. En attendant, la couche yolo-stack les porte dans `bundle.toml` et `crates/yolo-stack-theme`.
-
-## Options considérées
-
-| Option | Avantages | Inconvénients |
-| ------ | --------- | ------------- |
-| Définir un nouveau manifeste dans yolo-stack | Libre | Duplique yolo-theme-pack, deux formats à maintenir. |
-| Utiliser yolo-theme-pack seul | Aucun code ajouté | Pas d'empreintes CDN, pas de wallpapers par point de rupture, pas de portes UI 3:1 ni de rejet. |
-| yolo-theme-pack plus couche fine (retenue) | Un seul format, extras isolés, écarts documentés | Dépend d'une branche non fusionnée, `bundle.toml` à résorber quand yolo-ui absorbera les écarts. |
-
-## Conséquences
-
-- Positives : changer de thème change tout ; couleurs toujours lisibles ; admin et site partagent le même calcul.
-- Négatives : le site passe en mode îlots (navigation par pages complètes) ; dépendance à une branche yolo-ui tant qu'elle n'est pas fusionnée.
-- Travaux induits : œuvres finales à commander (voir le rapport) ; format AVIF et WebP des wallpapers ; sprites animés du pet ; CDN réel ; migration de l'admin ; fusion avec `claude-site-a11y`.
-
-## Vérification
-
-Sur vps : `cargo fmt --check`, `cargo clippy -p yolo-stack-theme --all-targets -- -D warnings`, `cargo test -p yolo-stack-theme`, `cargo check -p yolo-stack-theme --target wasm32-unknown-unknown`, puis dans `apps/shenron/crates/shenron-site` : `cargo test --features ssr` (le build génère `style/contrast-audit.txt`).
-
-## Références
-
-- yolo-ui : `crates/yolo-theme-pack`, `crates/yolo-tokens` (HCT, `Role`, `Variant`), `YoloThemePreset` et `ByronLovePetSpec` dans `crates/yolo-shared`.
-- ADR 0003 (verdict Leptos et Dioxus), ADR 0004 (pile retenue).
-- WCAG 2.2, critères 1.4.3 et 1.4.11 ; Design Tokens Community Group, format DTCG.
+Comme pour `yolo-tokens`, `yolo-theme-pack` (v1.1, rôle `focus-ring`, 50 rôles, `pet.files`, licences `unverified` et `pending-*` non distribuables) est une dépendance par chemin `../yolo-ui/crates/yolo-theme-pack` (workspace racine). Le crate est sur le `main` de yolo-ui (989690c) : aucun checkout séparé de la branche `claude-theme-packs` n'est plus nécessaire sur vps. Les licences non distribuables sont rejetées par `is_distributable_license` à la validation du bundle.

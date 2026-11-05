@@ -78,9 +78,9 @@ pub struct ResolvedBundle {
     pub contrast: f64,
     /// Effective scheme preference after merging user choice and bundle default.
     pub scheme: SchemePref,
-    /// The 49 roles in the light scheme, gated.
+    /// The 50 roles in the light scheme, gated.
     pub light: Roles,
-    /// The 49 roles in the dark scheme, gated.
+    /// The 50 roles in the dark scheme, gated.
     pub dark: Roles,
     /// Shape tokens.
     pub shape: Shape,
