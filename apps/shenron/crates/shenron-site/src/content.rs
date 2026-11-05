@@ -101,3 +101,87 @@ pub fn humanize(slug: &str) -> String {
         .collect::<Vec<_>>()
         .join(" ")
 }
+
+/// `"{volume}/{chapter}"` value of the `*vc` route parameter for a pair.
+pub fn manga_vc(volume: u32, chapter: u32) -> String {
+    format!("{volume}/{chapter}")
+}
+
+/// Static-route values for the `*vc` splat: exactly the existing pairs, once each.
+pub fn manga_vc_values() -> Vec<String> {
+    manga_chapters()
+        .into_iter()
+        .map(|(v, c)| manga_vc(v, c))
+        .collect()
+}
+
+/// Parses a `*vc` value (`"1/3"`). Rejects malformed input (extra segments, signs, zero,
+/// leading zeros, non-digits) and pairs absent from the catalog.
+pub fn parse_manga_vc(vc: &str) -> Option<(u32, u32)> {
+    let (v, c) = vc.split_once('/')?;
+    let canonical = |s: &str| {
+        !s.is_empty()
+            && s.len() <= 9
+            && s.bytes().all(|b| b.is_ascii_digit())
+            && !s.starts_with('0')
+    };
+    if !canonical(v) || !canonical(c) {
+        return None;
+    }
+    let (v, c): (u32, u32) = (v.parse().ok()?, c.parse().ok()?);
+    MANGA_VOLUMES
+        .iter()
+        .any(|(vol, n)| *vol == v && (1..=*n).contains(&c))
+        .then_some((v, c))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::collections::HashSet;
+
+    #[test]
+    fn vc_values_are_exactly_the_real_pairs_once() {
+        let values = manga_vc_values();
+        let real: usize = MANGA_VOLUMES.iter().map(|(_, n)| *n as usize).sum();
+        assert_eq!(values.len(), real);
+        assert_eq!(values.iter().collect::<HashSet<_>>().len(), real);
+        for v in &values {
+            assert!(parse_manga_vc(v).is_some(), "{v}");
+        }
+    }
+
+    #[test]
+    fn parser_accepts_real_pairs() {
+        assert_eq!(parse_manga_vc("1/3"), Some((1, 3)));
+        assert_eq!(parse_manga_vc("3/12"), Some((3, 12)));
+    }
+
+    #[test]
+    fn parser_rejects_malformed_and_absent_pairs() {
+        for bad in [
+            "",
+            "1",
+            "1/",
+            "/1",
+            "1/3/4",
+            "a/b",
+            "1/x",
+            "-1/1",
+            "+1/1",
+            "0/1",
+            "1/0",
+            "01/1",
+            "1/03",
+            "1/12",
+            "2/13",
+            "4/1",
+            "99999999999/1",
+            " 1/1",
+            "1/1 ",
+            "1//1",
+        ] {
+            assert_eq!(parse_manga_vc(bad), None, "{bad:?}");
+        }
+    }
+}

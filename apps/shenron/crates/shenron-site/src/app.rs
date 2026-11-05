@@ -1,6 +1,6 @@
 //! Application shell, layout and static route tree.
 
-use leptos::prelude::*;
+use leptos::{either::Either, prelude::*};
 use leptos_meta::{Html, MetaTags, Stylesheet, provide_meta_context};
 use leptos_router::{
     SsrMode,
@@ -12,7 +12,7 @@ use leptos_router::{
 
 use crate::{
     boot::BOOT_JS,
-    content::{databook_slugs, langs, manga_chapters, wiki_slugs},
+    content::{databook_slugs, langs, manga_vc_values, wiki_slugs},
     i18n::{Lang, t},
     pages::{CharactersPage, DatabookPage, HomePage, MangaPage, NotFound, ThemePage, WikiPage},
     theme_ui::{ThemeBrand, ThemePet, ThemeRuntime, ThemeSwitcher},
@@ -21,6 +21,8 @@ use crate::{
 
 /// HTML document shell rendered by the server for every route.
 pub fn shell(options: LeptosOptions) -> impl IntoView {
+    // Read by `Layout` to emit the hydration scripts on pages that contain islands.
+    provide_context(options.clone());
     view! {
         <!DOCTYPE html>
         <html data-theme=DEFAULT_ID>
@@ -30,7 +32,6 @@ pub fn shell(options: LeptosOptions) -> impl IntoView {
                 // Sets data-theme and the saved custom stylesheet before the first paint.
                 <script inner_html=BOOT_JS></script>
                 <AutoReload options=options.clone() />
-                <HydrationScripts options islands=true />
                 <MetaTags />
             </head>
             <body>
@@ -68,23 +69,22 @@ fn databook_params() -> StaticRoute {
         map
     })
 }
-
-/// `/{lang}/manga/{volume}/{chapter}`
+/// `/{lang}/manga/{volume}/{chapter}`: one splat value `"{volume}/{chapter}"` per real pair.
+/// Two separate lists (volumes, chapters) would make the router build their cartesian product.
 fn manga_params() -> StaticRoute {
     StaticRoute::new().prerender_params(|| async move {
-        let chapters = manga_chapters();
         let mut map = StaticParamsMap::new();
         map.insert("lang", langs());
-        map.insert(
-            "volume",
-            chapters.iter().map(|(v, _)| v.to_string()).collect(),
-        );
-        map.insert(
-            "chapter",
-            chapters.iter().map(|(_, c)| c.to_string()).collect(),
-        );
+        map.insert("vc", manga_vc_values());
         map
     })
+}
+
+/// True for the pages that contain islands (reader, theme settings). Every other page is plain
+/// server-rendered HTML and ships no wasm and no hydration script.
+pub fn ships_wasm(path: &str) -> bool {
+    let mut parts = path.trim_start_matches('/').split('/').skip(1);
+    matches!(parts.next(), Some("manga" | "theme"))
 }
 
 #[component]
@@ -117,7 +117,7 @@ pub fn App() -> impl IntoView {
                         ssr=SsrMode::Static(wiki_params())
                     />
                     <Route
-                        path=path!("/:lang/manga/:volume/:chapter")
+                        path=path!("/:lang/manga/*vc")
                         view=MangaPage
                         ssr=SsrMode::Static(manga_params())
                     />
@@ -138,6 +138,8 @@ pub fn App() -> impl IntoView {
 fn Layout(children: Children) -> impl IntoView {
     let location = use_location();
     let pathname = location.pathname;
+    // Islands (theme runtime, brand, switcher, pet) only exist on pages that ship wasm.
+    let interactive = ships_wasm(&pathname.get_untracked());
     let lang = Memo::new(move |_| Lang::from_path(&pathname.get()).unwrap_or(Lang::DEFAULT));
     // Same page in another locale: swap the first segment.
     let switch_href = move |target: Lang| {
@@ -155,11 +157,20 @@ fn Layout(children: Children) -> impl IntoView {
     view! {
         <Html attr:lang=move || lang.get().code() />
         <div class="theme-wallpaper" aria-hidden="true"></div>
-        <ThemeRuntime />
-        <ThemePet />
+        {interactive
+            .then(|| {
+                let options = expect_context::<LeptosOptions>();
+                view! { <HydrationScripts options islands=true /> }
+            })}
+        {interactive.then(|| view! { <ThemeRuntime /> })}
+        {interactive.then(|| view! { <ThemePet /> })}
         <header class="site-header">
             <nav aria-label=move || t(lang.get(), "nav.home")>
-                <ThemeBrand lang=lang.get_untracked().code().to_owned() />
+                {if interactive {
+                    Either::Left(view! { <ThemeBrand lang=lang.get_untracked().code().to_owned() /> })
+                } else {
+                    Either::Right(static_brand(lang.get_untracked()))
+                }}
                 <a href=move || format!("/{}/characters", lang.get().code())>
                     {move || t(lang.get(), "nav.characters")}
                 </a>
@@ -172,7 +183,8 @@ fn Layout(children: Children) -> impl IntoView {
                 <a href=move || format!("/{}/theme", lang.get().code())>
                     {move || t(lang.get(), "nav.theme")}
                 </a>
-                <ThemeSwitcher lang=lang.get_untracked().code().to_owned() />
+                {interactive
+                    .then(|| view! { <ThemeSwitcher lang=lang.get_untracked().code().to_owned() /> })}
                 <div
                     class="lang-switch"
                     role="group"
@@ -201,5 +213,19 @@ fn Layout(children: Children) -> impl IntoView {
         <footer class="site-footer">
             <p class="muted">{move || t(lang.get(), "footer.tagline")}</p>
         </footer>
+    }
+}
+
+/// Brand link of the default theme for pages without islands (no wasm, no theme switching).
+fn static_brand(lang: Lang) -> impl IntoView {
+    let title = crate::themes::resolved(&Default::default())
+        .title
+        .product_name
+        .clone();
+    view! {
+        <a class="brand" href=format!("/{}", lang.code())>
+            <span class="brand-logo" aria-hidden="true"></span>
+            <span>{title}</span>
+        </a>
     }
 }

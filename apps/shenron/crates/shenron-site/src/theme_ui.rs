@@ -29,6 +29,9 @@ fn resolved_memo(prefs: ArcRwSignal<UserThemePrefs>) -> Memo<ResolvedBundle> {
 }
 
 /// Loads the saved preferences once and applies every change to the page. Renders nothing.
+/// Setter of one numeric preference.
+type PrefWriter = Box<dyn Fn(&mut UserThemePrefs, f64) + Send + Sync>;
+
 #[island]
 pub fn ThemeRuntime() -> impl IntoView {
     let prefs = state::prefs();
@@ -275,7 +278,7 @@ pub fn ThemePanel(lang: String) -> impl IntoView {
                   max: f64,
                   step: f64,
                   read: Box<dyn Fn(&ResolvedBundle) -> f64 + Send + Sync>,
-                  write: Box<dyn Fn(&mut UserThemePrefs, f64) + Send + Sync>| {
+                  write: PrefWriter| {
         let p = prefs.clone();
         let id = format!("theme-{key}");
         view! {

@@ -18,8 +18,9 @@ pub const READER_CANVAS_ID: &str = "reader";
 /// and the painter is attached client-side after hydration, reading
 /// `data-volume` / `data-chapter` to fetch the first plate. Until then the
 /// canvas keeps the `--color-reader-bg` background from the generated CSS.
-#[component]
-pub fn ReaderIsland(lang: Lang, volume: u32, chapter: u32) -> impl IntoView {
+#[island]
+pub fn ReaderIsland(lang: String, volume: u32, chapter: u32) -> impl IntoView {
+    let lang = Lang::parse(&lang).unwrap_or(Lang::DEFAULT);
     view! {
         <section class="reader" aria-label=t(lang, "manga.reader_label")>
             <canvas
