@@ -37,7 +37,7 @@ describe("ImageResponse", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("cache-control")).toBe(OG_CACHE_CONTROL);
     const type = response.headers.get("content-type");
-    expect(["image/png", "image/svg+xml"]).toContain(type);
+    expect(["image/png", "image/svg+xml"]).toContain(type ?? "");
     const bytes = new Uint8Array(await response.arrayBuffer());
     expect(bytes.byteLength).toBeGreaterThan(0);
     if (type === "image/png") {

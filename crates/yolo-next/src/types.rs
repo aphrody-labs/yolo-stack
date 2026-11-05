@@ -50,13 +50,7 @@ pub struct Diagnostic {
 impl Diagnostic {
     /// Creates a diagnostic with the given severity.
     pub fn new(severity: Severity, code: impl Into<String>, message: impl Into<String>) -> Self {
-        Self {
-            severity,
-            code: code.into(),
-            message: message.into(),
-            file: None,
-            hint: None,
-        }
+        Self { severity, code: code.into(), message: message.into(), file: None, hint: None }
     }
 
     /// Informational diagnostic.
@@ -309,9 +303,7 @@ impl Default for ImagesConfig {
             minimum_cache_ttl: 14_400,
             dangerously_allow_svg: false,
             dangerously_allow_local_ip: false,
-            content_security_policy: String::from(
-                "script-src 'none'; frame-src 'none'; sandbox;",
-            ),
+            content_security_policy: String::from("script-src 'none'; frame-src 'none'; sandbox;"),
             content_disposition_type: String::from("attachment"),
             unoptimized: false,
             maximum_redirects: 3,
@@ -1175,6 +1167,7 @@ pub struct RouteManifest {
     pub diagnostics: Vec<Diagnostic>,
 }
 
+#[allow(clippy::derivable_impls)] // explicit so the empty manifest stays readable next to the struct
 impl Default for RouteManifest {
     fn default() -> Self {
         Self {
@@ -2046,11 +2039,7 @@ pub struct YoloThemeConfig {
 
 impl Default for YoloThemeConfig {
     fn default() -> Self {
-        Self {
-            preset: String::from("yolo-neutral"),
-            dark: true,
-            seed_hex: None,
-        }
+        Self { preset: String::from("yolo-neutral"), dark: true, seed_hex: None }
     }
 }
 

@@ -238,7 +238,16 @@ export function resolveTsconfigPath(specifier: string, paths: { baseUrl: string;
   return undefined;
 }
 
-const SOURCE_FILTER = /\.(?:tsx|ts|jsx|js|mjs|mts)$/;
+// node_modules never needs the directive transform; excluding it here keeps Bun's own loader for dependencies.
+const SOURCE_FILTER = /^(?!.*[\\/]node_modules[\\/]).*\.(?:tsx|ts|jsx|js|mjs|mts)$/;
+
+/** Bun loader for a path matched by `SOURCE_FILTER`. */
+function sourceLoader(path: string): "tsx" | "ts" | "jsx" | "js" {
+  if (path.endsWith(".tsx")) return "tsx";
+  if (path.endsWith(".ts") || path.endsWith(".mts")) return "ts";
+  if (path.endsWith(".jsx")) return "jsx";
+  return "js";
+}
 const NEXT_FILTER = /^(?:next(?:\/.*)?|server-only|client-only)$/;
 const SELF_FILTER = /^@yolo-rs\/next(?:\/.*)?$/;
 
@@ -310,23 +319,26 @@ export function yoloNextPlugin(options: YoloNextPluginOptions): BunPlugin {
         const path = args.path;
         if (args.namespace && args.namespace !== "file") return undefined;
         if (!isAbsolute(path)) return undefined;
-        const posix = toPosix(path);
-        if (posix.includes("/node_modules/")) return undefined;
-        const rel = relative(root, path);
-        if (rel.startsWith("..") || isAbsolute(rel)) return undefined;
-        const id = toPosix(rel);
-        if (id.startsWith(`${distDir.replace(/^\.\//, "")}/`)) return undefined;
         let source: string;
         try {
           source = readFileSync(path, "utf8");
         } catch {
           return undefined;
         }
-        if (!source.includes("use client") && !source.includes("use server")) return undefined;
+        // Bun 1.4.6 runtime plugins reject an `undefined` onLoad result for a real file,
+        // so files left untouched are passed through with their own loader.
+        const passthrough = { contents: source, loader: sourceLoader(path) };
+        const posix = toPosix(path);
+        if (posix.includes("/node_modules/")) return passthrough;
+        const rel = relative(root, path);
+        if (rel.startsWith("..") || isAbsolute(rel)) return passthrough;
+        const id = toPosix(rel);
+        if (id.startsWith(`${distDir.replace(/^\.\//, "")}/`)) return passthrough;
+        if (!source.includes("use client") && !source.includes("use server")) return passthrough;
         const result = transformModule(source, id, options.env, { actionsModule: options.actionsModule, file: path });
         if (result.clientModule) options.onClientModule?.(id);
         for (const name of result.serverActions) options.onServerAction?.(id, name);
-        if (result.contents === undefined) return undefined;
+        if (result.contents === undefined) return passthrough;
         return { contents: result.contents, loader: result.loader };
       });
     },

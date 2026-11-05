@@ -122,7 +122,8 @@ fn extension_of(path: &str) -> String {
 pub fn cache_control_for(plan: &CdnPlan, path: &str) -> String {
     let pathname = path.split(['?', '#']).next().unwrap_or(path);
     let under_route = |route: &str| {
-        !route.is_empty() && (pathname.starts_with(route) || pathname.contains(&format!("{route}/")))
+        !route.is_empty()
+            && (pathname.starts_with(route) || pathname.contains(&format!("{route}/")))
     };
     if under_route(&plan.static_route)
         || under_route(&plan.fonts_route)
@@ -178,10 +179,7 @@ pub fn is_hashed_asset(path: &str) -> bool {
     let Some((stem, _ext)) = name.rsplit_once('.') else {
         return false;
     };
-    let candidate = stem
-        .rsplit(['-', '.'])
-        .next()
-        .unwrap_or(stem);
+    let candidate = stem.rsplit(['-', '.']).next().unwrap_or(stem);
     candidate.len() < stem.len() && is_hex_hash(candidate)
 }
 
@@ -208,14 +206,14 @@ pub fn upload_script_ts(plan: &CdnPlan) -> String {
     } else {
         serde_json::to_string(&upload.bucket).unwrap_or_default()
     };
-    let endpoint = upload
-        .endpoint
-        .as_deref()
-        .map_or_else(|| String::from("process.env.CDN_ENDPOINT"), |e| serde_json::to_string(e).unwrap_or_default());
-    let region = upload
-        .region
-        .as_deref()
-        .map_or_else(|| String::from("process.env.CDN_REGION ?? \"auto\""), |r| serde_json::to_string(r).unwrap_or_default());
+    let endpoint = upload.endpoint.as_deref().map_or_else(
+        || String::from("process.env.CDN_ENDPOINT"),
+        |e| serde_json::to_string(e).unwrap_or_default(),
+    );
+    let region = upload.region.as_deref().map_or_else(
+        || String::from("process.env.CDN_REGION ?? \"auto\""),
+        |r| serde_json::to_string(r).unwrap_or_default(),
+    );
     let prefix = serde_json::to_string(&upload.prefix).unwrap_or_else(|_| String::from("\"\""));
     let static_route = serde_json::to_string(&plan.static_route).unwrap_or_default();
     let provider = if upload.provider.is_empty() {
@@ -293,7 +291,10 @@ mod tests {
         let plan = plan_with("", "/docs/", None);
         assert_eq!(plan.base_path, "/docs");
         assert_eq!(plan.static_route, "/docs/_yolo/static");
-        assert_eq!(plan.compat_static_routes, vec![String::from("/docs/_next/static")]);
+        assert_eq!(
+            plan.compat_static_routes,
+            vec![String::from("/docs/_next/static")]
+        );
         assert_eq!(plan.fonts_route, "/docs/_yolo/fonts");
         assert_eq!(plan.expire_time, 31_536_000);
         assert!(plan.compress && plan.powered_by_header && plan.generate_etags);
@@ -318,11 +319,12 @@ mod tests {
         let upload = plan.upload.unwrap();
         assert_eq!(upload.provider, "r2");
         assert_eq!(upload.bucket, "assets");
-        assert_eq!(upload.endpoint.as_deref(), Some("https://acct.r2.cloudflarestorage.com"));
-        let export = cdn_plan(&NextConfig {
-            output: Some(String::from("export")),
-            ..NextConfig::default()
-        });
+        assert_eq!(
+            upload.endpoint.as_deref(),
+            Some("https://acct.r2.cloudflarestorage.com")
+        );
+        let export =
+            cdn_plan(&NextConfig { output: Some(String::from("export")), ..NextConfig::default() });
         assert_eq!(export.output, OutputMode::Export);
     }
 
@@ -338,7 +340,10 @@ mod tests {
             "https://cdn.example.com/_yolo/static/static/x.css?dpl=dpl_123"
         );
         let no_dpl = plan_with("", "/app", None);
-        assert_eq!(public_url(&no_dpl, "chunk.js"), "/app/_yolo/static/chunk.js");
+        assert_eq!(
+            public_url(&no_dpl, "chunk.js"),
+            "/app/_yolo/static/chunk.js"
+        );
     }
 
     #[test]
@@ -356,14 +361,38 @@ mod tests {
     #[test]
     fn cache_control_classification() {
         let plan = plan_with("", "", None);
-        assert_eq!(cache_control_for(&plan, "static/chunks/app-abc12345.js"), plan.immutable_cache_control);
-        assert_eq!(cache_control_for(&plan, "/_yolo/static/main.js"), plan.immutable_cache_control);
-        assert_eq!(cache_control_for(&plan, "/_next/static/css/x.css"), plan.immutable_cache_control);
-        assert_eq!(cache_control_for(&plan, "/_yolo/fonts/inter.woff2"), plan.immutable_cache_control);
-        assert_eq!(cache_control_for(&plan, "index.html"), plan.dynamic_html_cache_control);
-        assert_eq!(cache_control_for(&plan, "robots.txt"), plan.public_cache_control);
-        assert_eq!(cache_control_for(&plan, "logo.png"), plan.public_cache_control);
-        assert_eq!(cache_control_for(&plan, "chunk.1a2b3c4d.js"), plan.immutable_cache_control);
+        assert_eq!(
+            cache_control_for(&plan, "static/chunks/app-abc12345.js"),
+            plan.immutable_cache_control
+        );
+        assert_eq!(
+            cache_control_for(&plan, "/_yolo/static/main.js"),
+            plan.immutable_cache_control
+        );
+        assert_eq!(
+            cache_control_for(&plan, "/_next/static/css/x.css"),
+            plan.immutable_cache_control
+        );
+        assert_eq!(
+            cache_control_for(&plan, "/_yolo/fonts/inter.woff2"),
+            plan.immutable_cache_control
+        );
+        assert_eq!(
+            cache_control_for(&plan, "index.html"),
+            plan.dynamic_html_cache_control
+        );
+        assert_eq!(
+            cache_control_for(&plan, "robots.txt"),
+            plan.public_cache_control
+        );
+        assert_eq!(
+            cache_control_for(&plan, "logo.png"),
+            plan.public_cache_control
+        );
+        assert_eq!(
+            cache_control_for(&plan, "chunk.1a2b3c4d.js"),
+            plan.immutable_cache_control
+        );
     }
 
     #[test]
@@ -372,8 +401,14 @@ mod tests {
         assert!(is_hashed_asset("a/b/chunk.deadbeefcafe.css"));
         assert!(is_hashed_asset("main-0123456789ABCDEF.js"));
         assert!(!is_hashed_asset("main.js"));
-        assert!(!is_hashed_asset("abc12345.js"), "a bare hash with no stem is a plain name");
-        assert!(!is_hashed_asset("app-abc1234.js"), "7 hex chars is below the threshold");
+        assert!(
+            !is_hashed_asset("abc12345.js"),
+            "a bare hash with no stem is a plain name"
+        );
+        assert!(
+            !is_hashed_asset("app-abc1234.js"),
+            "7 hex chars is below the threshold"
+        );
         assert!(!is_hashed_asset("app-xyz12345.js"));
         assert!(!is_hashed_asset("README"));
     }
@@ -384,13 +419,19 @@ mod tests {
         assert_eq!(content_type_for("a.mjs"), "text/javascript; charset=utf-8");
         assert_eq!(content_type_for("a.css"), "text/css; charset=utf-8");
         assert_eq!(content_type_for("a.HTML"), "text/html; charset=utf-8");
-        assert_eq!(content_type_for("a.json"), "application/json; charset=utf-8");
+        assert_eq!(
+            content_type_for("a.json"),
+            "application/json; charset=utf-8"
+        );
         assert_eq!(content_type_for("a.js.map"), "application/json");
         assert_eq!(content_type_for("a.svg"), "image/svg+xml");
         assert_eq!(content_type_for("a.ico"), "image/x-icon");
         assert_eq!(content_type_for("a.woff2"), "font/woff2");
         assert_eq!(content_type_for("a.wasm"), "application/wasm");
-        assert_eq!(content_type_for("site.webmanifest"), "application/manifest+json");
+        assert_eq!(
+            content_type_for("site.webmanifest"),
+            "application/manifest+json"
+        );
         assert_eq!(content_type_for("a.webm"), "video/webm");
         assert_eq!(content_type_for("a.bin"), "application/octet-stream");
         assert_eq!(content_type_for("noext"), "application/octet-stream");
@@ -401,11 +442,17 @@ mod tests {
         let plan = plan_with("https://cdn.example.com", "", Some("d1"));
         let entries = asset_manifest(
             &plan,
-            &[(String::from("static/app-abc12345.js"), 1200), (String::from("index.html"), 300)],
+            &[
+                (String::from("static/app-abc12345.js"), 1200),
+                (String::from("index.html"), 300),
+            ],
         );
         assert_eq!(entries.len(), 2);
         assert!(entries[0].hashed);
-        assert_eq!(entries[0].public_url, "https://cdn.example.com/_yolo/static/static/app-abc12345.js?dpl=d1");
+        assert_eq!(
+            entries[0].public_url,
+            "https://cdn.example.com/_yolo/static/static/app-abc12345.js?dpl=d1"
+        );
         assert_eq!(entries[0].content_type, "text/javascript; charset=utf-8");
         assert_eq!(entries[0].cache_control, plan.immutable_cache_control);
         assert!(!entries[1].hashed);
@@ -414,6 +461,9 @@ mod tests {
         assert!(script.contains("new S3Client("));
         assert!(script.contains("cdn-manifest.json"));
         assert!(script.contains("client.write("));
-        assert!(script.lines().count() < 80, "upload script must stay under 80 lines");
+        assert!(
+            script.lines().count() < 80,
+            "upload script must stay under 80 lines"
+        );
     }
 }

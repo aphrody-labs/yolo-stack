@@ -28,6 +28,12 @@
 //! - [`project`]: orchestrator (`analyze_project`, `migrate`).
 
 #![forbid(unsafe_code)]
+// Config structs mirror Next.js option bags, whose booleans are independent flags, not state machines.
+#![allow(clippy::struct_excessive_bools)]
+// Docs name products (TanStack, CloudFront, Bun) rather than Rust items.
+#![allow(clippy::doc_markdown)]
+// Parsers and emitters are single-pass walkers over Next.js option tables; length tracks the table.
+#![allow(clippy::too_many_lines)]
 
 pub mod types;
 

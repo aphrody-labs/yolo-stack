@@ -7,6 +7,7 @@
 //! `compiler.define` + `env` become `define` entries and `serverExternalPackages` stay external.
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 
 use serde_json::{Map, Value, json};
 
@@ -21,8 +22,16 @@ const DEFAULT_EXTENSIONS: [&str; 6] = [".tsx", ".ts", ".jsx", ".js", ".mjs", ".j
 /// Maps a webpack/Turbopack loader package to a Bun plugin kind.
 pub fn map_turbopack_loader(loader: &str) -> (BunPluginKind, Option<BunLoader>, Support) {
     match loader {
-        "@svgr/webpack" => (BunPluginKind::SvgReact, Some(BunLoader::Tsx), Support::Mapped),
-        "svg-inline-loader" | "raw-loader" | "asset/source" | "raw" | "glslify-loader"
+        "@svgr/webpack" => (
+            BunPluginKind::SvgReact,
+            Some(BunLoader::Tsx),
+            Support::Mapped,
+        ),
+        "svg-inline-loader"
+        | "raw-loader"
+        | "asset/source"
+        | "raw"
+        | "glslify-loader"
         | "webpack-glsl-loader" => (BunPluginKind::Text, Some(BunLoader::Text), Support::Mapped),
         "graphql-tag/loader" => (BunPluginKind::Text, Some(BunLoader::Text), Support::Partial),
         "yaml-loader" => (
@@ -59,9 +68,7 @@ pub fn map_turbopack_loader(loader: &str) -> (BunPluginKind, Option<BunLoader>, 
 fn loader_note(loader: &str) -> String {
     match loader {
         "@svgr/webpack" => String::from("SVG -> React component via yolo:svg-react plugin"),
-        "graphql-tag/loader" => {
-            String::from("exports source string; use graphql() at runtime")
-        }
+        "graphql-tag/loader" => String::from("exports source string; use graphql() at runtime"),
         "yaml-loader" => String::from("Bun yaml loader"),
         "@mdx-js/loader" | "@next/mdx" => String::from("Bun.markdown + mdx subset"),
         "sass-loader" => String::from(
@@ -70,13 +77,21 @@ fn loader_note(loader: &str) -> String {
         "babel-loader" => String::from(
             "Bun transpiles TS/JSX natively; React Compiler via Bun.build reactCompiler",
         ),
-        "json5-loader" => String::from("Bun jsonc loader (JSON5 subset: comments, trailing commas)"),
-        "string-replace-loader" => String::from("no Bun equivalent; apply the replacement in source"),
+        "json5-loader" => {
+            String::from("Bun jsonc loader (JSON5 subset: comments, trailing commas)")
+        }
+        "string-replace-loader" => {
+            String::from("no Bun equivalent; apply the replacement in source")
+        }
         "file-loader" | "url-loader" | "asset/resource" | "asset" => {
             String::from("Bun file loader (import yields the asset URL)")
         }
         "toml-loader" => String::from("Bun toml loader"),
-        "raw-loader" | "asset/source" | "svg-inline-loader" | "raw" | "glslify-loader"
+        "raw-loader"
+        | "asset/source"
+        | "svg-inline-loader"
+        | "raw"
+        | "glslify-loader"
         | "webpack-glsl-loader" => String::from("Bun text loader"),
         other => format!("loader `{other}` has no Bun plugin; write a Bun.plugin onLoad hook"),
     }
@@ -180,11 +195,12 @@ pub(crate) fn glob_to_regex_source(glob: &str) -> String {
                     .split(',')
                     .map(|alt| {
                         let mut escaped = String::new();
-                        alt.chars().for_each(|ch| escape_regex_char(ch, &mut escaped));
+                        alt.chars()
+                            .for_each(|ch| escape_regex_char(ch, &mut escaped));
                         escaped
                     })
                     .collect();
-                out.push_str(&format!("(?:{})", alternatives.join("|")));
+                _ = write!(out, "(?:{})", alternatives.join("|"));
                 i = j + 1;
             } else {
                 out.push_str("\\{");
@@ -228,12 +244,7 @@ fn kind_id(kind: BunPluginKind) -> &'static str {
 }
 
 fn feature(feature: impl Into<String>, support: Support, note: impl Into<String>) -> FeatureStatus {
-    FeatureStatus {
-        feature: feature.into(),
-        support,
-        note: note.into(),
-        target: None,
-    }
+    FeatureStatus { feature: feature.into(), support, note: note.into(), target: None }
 }
 
 fn translate_rule(glob: &str, rule: &TurbopackRule, plan: &mut BunBundlerPlan) {
@@ -383,7 +394,9 @@ pub fn translate_turbopack(cfg: &NextConfig) -> BunBundlerPlan {
     let turbo = &cfg.turbopack;
 
     translate_aliases(&turbo.resolve_alias, &mut plan);
-    if !plan.aliases.is_empty() || !plan.browser_aliases.is_empty() || !plan.empty_modules.is_empty()
+    if !plan.aliases.is_empty()
+        || !plan.browser_aliases.is_empty()
+        || !plan.empty_modules.is_empty()
     {
         let mut options = Map::new();
         options.insert(String::from("aliases"), json!(plan.aliases));
@@ -410,9 +423,14 @@ pub fn translate_turbopack(cfg: &NextConfig) -> BunBundlerPlan {
     } else {
         turbo.resolve_extensions.clone()
     };
-    plan.root = turbo.root.clone();
+    plan.root.clone_from(&turbo.root);
 
-    for (key, value) in cfg.compiler.define.iter().chain(&cfg.compiler.define_server) {
+    for (key, value) in cfg
+        .compiler
+        .define
+        .iter()
+        .chain(&cfg.compiler.define_server)
+    {
         plan.define.insert(key.clone(), value.clone());
     }
     for (key, value) in &cfg.env {
@@ -421,7 +439,7 @@ pub fn translate_turbopack(cfg: &NextConfig) -> BunBundlerPlan {
             serde_json::to_string(value).unwrap_or_else(|_| format!("\"{value}\"")),
         );
     }
-    plan.external = cfg.server_external_packages.clone();
+    plan.external.clone_from(&cfg.server_external_packages);
 
     if turbo.debug_ids == Some(true) {
         plan.unsupported.push(feature(
@@ -458,20 +476,23 @@ pub fn bunfig_toml(plan: &BunBundlerPlan, cfg: &YoloWebConfig) -> String {
         .cloned()
         .unwrap_or_else(|| String::from("NEXT_PUBLIC_"));
     let others: Vec<String> = prefixes.map(|p| format!("{p}*")).collect();
-    let mut out = String::from("# Generated by yolo-next (Bun 1.4.4) from next.config turbopack settings.\n");
-    out.push_str(&format!(
-        "# {} plugin(s), {} loader override(s), {} alias(es).\n",
+    let mut out =
+        String::from("# Generated by yolo-next (Bun 1.4.4) from next.config turbopack settings.\n");
+    _ = writeln!(
+        out,
+        "# {} plugin(s), {} loader override(s), {} alias(es).",
         plan.plugins.len(),
         plan.loaders.len(),
         plan.aliases.len() + plan.browser_aliases.len()
-    ));
+    );
     out.push_str("[serve.static]\nplugins = [\"./yolo.bundler.ts\"]\n");
-    out.push_str(&format!("env = \"{first}*\"\nsourcemap = \"linked\"\n"));
+    _ = writeln!(out, "env = \"{first}*\"\nsourcemap = \"linked\"");
     if !others.is_empty() {
-        out.push_str(&format!(
-            "# Bun supports one env prefix pattern; also public (inlined by yolo.bundler.ts): {}\n",
+        _ = writeln!(
+            out,
+            "# Bun supports one env prefix pattern; also public (inlined by yolo.bundler.ts): {}",
             others.join(", ")
-        ));
+        );
     }
     out.push_str("\n[install]\nexact = true\n\n[test]\nroot = \"./tests\"\n");
     out
@@ -509,34 +530,41 @@ pub fn bundler_plugins_ts(plan: &BunBundlerPlan) -> String {
          import {\n  aliasPlugin,\n  loaderOverridePlugin,\n  markdownPlugin,\n  svgReactPlugin,\n  textPlugin,\n} from \"@yolo-rs/next/turbopack\";\n\n",
     );
     out.push_str("export const yoloBundlerPlugins: import(\"bun\").BunPlugin[] = [\n");
-    if !plan.aliases.is_empty() || !plan.browser_aliases.is_empty() || !plan.empty_modules.is_empty()
+    if !plan.aliases.is_empty()
+        || !plan.browser_aliases.is_empty()
+        || !plan.empty_modules.is_empty()
     {
-        out.push_str(&format!(
-            "  aliasPlugin({}, {}, {}),\n",
+        _ = writeln!(
+            out,
+            "  aliasPlugin({}, {}, {}),",
             serde_json::to_string(&plan.aliases).unwrap_or_else(|_| String::from("{}")),
             serde_json::to_string(&plan.browser_aliases).unwrap_or_else(|_| String::from("{}")),
             serde_json::to_string(&plan.empty_modules).unwrap_or_else(|_| String::from("[]")),
-        ));
+        );
     }
     for spec in &plan.plugins {
         let filter = format!("new RegExp({})", ts_string(&spec.filter));
         let origin = spec.origin_loader.as_deref().unwrap_or("rule");
         match spec.kind {
             BunPluginKind::AliasResolve => {}
-            BunPluginKind::SvgReact => out.push_str(&format!("  svgReactPlugin({filter}), // {origin}\n")),
-            BunPluginKind::Text => out.push_str(&format!("  textPlugin({filter}), // {origin}\n")),
-            BunPluginKind::Markdown => out.push_str(&format!("  markdownPlugin({filter}), // {origin}\n")),
+            BunPluginKind::SvgReact => _ = writeln!(out, "  svgReactPlugin({filter}), // {origin}"),
+            BunPluginKind::Text => _ = writeln!(out, "  textPlugin({filter}), // {origin}"),
+            BunPluginKind::Markdown => _ = writeln!(out, "  markdownPlugin({filter}), // {origin}"),
             BunPluginKind::LoaderOverride => {
                 let loader = spec.loader.map_or("file", bun_loader_id);
-                out.push_str(&format!(
-                    "  loaderOverridePlugin({filter}, \"{loader}\"), // {origin}\n"
-                ));
+                _ = writeln!(
+                    out,
+                    "  loaderOverridePlugin({filter}, \"{loader}\"), // {origin}"
+                );
             }
-            BunPluginKind::Unsupported => out.push_str(&format!(
-                "  // unsupported: {origin} for {} ({})\n",
-                ts_string(&spec.filter),
-                loader_note(origin)
-            )),
+            BunPluginKind::Unsupported => {
+                _ = writeln!(
+                    out,
+                    "  // unsupported: {origin} for {} ({})",
+                    ts_string(&spec.filter),
+                    loader_note(origin)
+                );
+            }
         }
     }
     out.push_str("];\n\nexport default yoloBundlerPlugins;\n");
@@ -551,10 +579,7 @@ mod tests {
 
     fn rule(loader: &str) -> Vec<TurbopackRule> {
         vec![TurbopackRule {
-            loaders: vec![TurbopackLoader {
-                loader: loader.to_owned(),
-                options: Map::new(),
-            }],
+            loaders: vec![TurbopackLoader { loader: loader.to_owned(), options: Map::new() }],
             as_: Some(String::from("*.js")),
             type_: None,
             condition: None,
@@ -570,10 +595,16 @@ mod tests {
         rules.insert(String::from("*.scss"), rule("sass-loader"));
         let mut resolve_alias = BTreeMap::new();
         resolve_alias.insert(String::from("underscore"), json!("lodash"));
-        resolve_alias.insert(String::from("mocha"), json!({ "browser": "mocha/browser-entry.js" }));
+        resolve_alias.insert(
+            String::from("mocha"),
+            json!({ "browser": "mocha/browser-entry.js" }),
+        );
         resolve_alias.insert(String::from("fs"), json!(false));
         resolve_alias.insert(String::from("@/*"), json!("./*"));
-        resolve_alias.insert(String::from("pkg"), json!({ "import": "pkg/esm", "node": "pkg/node" }));
+        resolve_alias.insert(
+            String::from("pkg"),
+            json!({ "import": "pkg/esm", "node": "pkg/node" }),
+        );
         resolve_alias.insert(String::from("arr"), json!(["a", "b"]));
         let mut env = BTreeMap::new();
         env.insert(String::from("APP_NAME"), String::from("Yolo Fixture"));
@@ -589,10 +620,7 @@ mod tests {
                 ..TurbopackConfig::default()
             },
             env,
-            compiler: CompilerConfig {
-                define,
-                ..CompilerConfig::default()
-            },
+            compiler: CompilerConfig { define, ..CompilerConfig::default() },
             server_external_packages: vec![String::from("sharp")],
             ..NextConfig::default()
         }
@@ -602,7 +630,11 @@ mod tests {
     fn loader_mapping_table() {
         assert_eq!(
             map_turbopack_loader("@svgr/webpack"),
-            (BunPluginKind::SvgReact, Some(BunLoader::Tsx), Support::Mapped)
+            (
+                BunPluginKind::SvgReact,
+                Some(BunLoader::Tsx),
+                Support::Mapped
+            )
         );
         assert_eq!(
             map_turbopack_loader("raw-loader"),
@@ -610,16 +642,42 @@ mod tests {
         );
         assert_eq!(
             map_turbopack_loader("yaml-loader"),
-            (BunPluginKind::LoaderOverride, Some(BunLoader::Yaml), Support::Mapped)
+            (
+                BunPluginKind::LoaderOverride,
+                Some(BunLoader::Yaml),
+                Support::Mapped
+            )
         );
-        assert_eq!(map_turbopack_loader("graphql-tag/loader").2, Support::Partial);
-        assert_eq!(map_turbopack_loader("@mdx-js/loader").0, BunPluginKind::Markdown);
-        assert_eq!(map_turbopack_loader("sass-loader"), (BunPluginKind::Unsupported, None, Support::Unsupported));
-        assert_eq!(map_turbopack_loader("babel-loader"), (BunPluginKind::Unsupported, None, Support::Partial));
+        assert_eq!(
+            map_turbopack_loader("graphql-tag/loader").2,
+            Support::Partial
+        );
+        assert_eq!(
+            map_turbopack_loader("@mdx-js/loader").0,
+            BunPluginKind::Markdown
+        );
+        assert_eq!(
+            map_turbopack_loader("sass-loader"),
+            (BunPluginKind::Unsupported, None, Support::Unsupported)
+        );
+        assert_eq!(
+            map_turbopack_loader("babel-loader"),
+            (BunPluginKind::Unsupported, None, Support::Partial)
+        );
         assert_eq!(map_turbopack_loader("file-loader").1, Some(BunLoader::File));
-        assert_eq!(map_turbopack_loader("json5-loader"), (BunPluginKind::LoaderOverride, Some(BunLoader::Jsonc), Support::Partial));
+        assert_eq!(
+            map_turbopack_loader("json5-loader"),
+            (
+                BunPluginKind::LoaderOverride,
+                Some(BunLoader::Jsonc),
+                Support::Partial
+            )
+        );
         assert_eq!(map_turbopack_loader("toml-loader").1, Some(BunLoader::Toml));
-        assert_eq!(map_turbopack_loader("whatever-loader").2, Support::Unsupported);
+        assert_eq!(
+            map_turbopack_loader("whatever-loader").2,
+            Support::Unsupported
+        );
     }
 
     #[test]
@@ -637,7 +695,10 @@ mod tests {
     fn glob_regex_conversion() {
         assert_eq!(glob_to_regex_source("*.svg"), "\\.svg$");
         assert_eq!(glob_to_regex_source("**/*.md"), "\\.md$");
-        assert_eq!(glob_to_regex_source("src/**/*.graphql"), "src/.*\\.graphql$");
+        assert_eq!(
+            glob_to_regex_source("src/**/*.graphql"),
+            "src/.*\\.graphql$"
+        );
         assert_eq!(glob_to_regex_source("icon-*.svg"), "icon-[^/]*\\.svg$");
         assert_eq!(glob_to_regex_source("*.{png,jpg}"), "\\.(?:png|jpg)$");
         assert_eq!(glob_to_regex_source("assets/*.txt"), "assets/[^/]*\\.txt$");
@@ -649,38 +710,92 @@ mod tests {
     #[test]
     fn translation_of_rules_and_aliases() {
         let plan = translate_turbopack(&fixture_config());
-        let svg = plan.plugins.iter().find(|p| p.name == "yolo:svg-react:svg").unwrap();
+        let svg = plan
+            .plugins
+            .iter()
+            .find(|p| p.name == "yolo:svg-react:svg")
+            .unwrap();
         assert_eq!(svg.filter, "\\.svg$");
         assert_eq!(svg.loader, Some(BunLoader::Tsx));
         assert_eq!(svg.origin_loader.as_deref(), Some("@svgr/webpack"));
         assert_eq!(svg.options.get("as"), Some(&json!("*.js")));
-        let md = plan.plugins.iter().find(|p| p.name == "yolo:text:md").unwrap();
+        let md = plan
+            .plugins
+            .iter()
+            .find(|p| p.name == "yolo:text:md")
+            .unwrap();
         assert_eq!(md.kind, BunPluginKind::Text);
-        let yaml = plan.plugins.iter().find(|p| p.name == "yolo:loader-override:yaml").unwrap();
+        let yaml = plan
+            .plugins
+            .iter()
+            .find(|p| p.name == "yolo:loader-override:yaml")
+            .unwrap();
         assert_eq!(yaml.loader, Some(BunLoader::Yaml));
         assert_eq!(plan.loaders.get(".yaml"), Some(&BunLoader::Yaml));
-        assert!(plan.loaders.get(".svg").is_none(), "svg-react is a plugin, not a loader override");
-        assert!(plan.plugins.iter().any(|p| p.name == "yolo:unsupported:scss"));
-        assert!(plan.unsupported.iter().any(|f| f.feature.contains("sass-loader") && f.support == Support::Unsupported));
-        assert!(plan.unsupported.iter().any(|f| f.feature.contains("graphql-tag/loader") && f.support == Support::Partial));
+        assert!(
+            !plan.loaders.contains_key(".svg"),
+            "svg-react is a plugin, not a loader override"
+        );
+        assert!(
+            plan.plugins
+                .iter()
+                .any(|p| p.name == "yolo:unsupported:scss")
+        );
+        assert!(
+            plan.unsupported
+                .iter()
+                .any(|f| f.feature.contains("sass-loader") && f.support == Support::Unsupported)
+        );
+        assert!(
+            plan.unsupported
+                .iter()
+                .any(|f| f.feature.contains("graphql-tag/loader") && f.support == Support::Partial)
+        );
 
-        assert_eq!(plan.aliases.get("underscore").map(String::as_str), Some("lodash"));
+        assert_eq!(
+            plan.aliases.get("underscore").map(String::as_str),
+            Some("lodash")
+        );
         assert_eq!(plan.aliases.get("@/*").map(String::as_str), Some("./*"));
-        assert_eq!(plan.browser_aliases.get("mocha").map(String::as_str), Some("mocha/browser-entry.js"));
+        assert_eq!(
+            plan.browser_aliases.get("mocha").map(String::as_str),
+            Some("mocha/browser-entry.js")
+        );
         assert_eq!(plan.empty_modules, vec![String::from("fs")]);
         assert_eq!(plan.aliases.get("arr").map(String::as_str), Some("a"));
         assert_eq!(plan.aliases.get("pkg").map(String::as_str), Some("pkg/esm"));
-        assert!(plan.unsupported.iter().any(|f| f.feature == "turbopack.resolveAlias conditions"));
-        assert!(plan.unsupported.iter().any(|f| f.feature == "turbopack.resolveAlias[arr]"));
+        assert!(
+            plan.unsupported
+                .iter()
+                .any(|f| f.feature == "turbopack.resolveAlias conditions")
+        );
+        assert!(
+            plan.unsupported
+                .iter()
+                .any(|f| f.feature == "turbopack.resolveAlias[arr]")
+        );
         assert_eq!(plan.plugins[0].kind, BunPluginKind::AliasResolve);
         assert!(plan.plugins[0].filter.contains("underscore"));
 
-        assert_eq!(plan.extensions, vec![String::from(".mdx"), String::from(".tsx")]);
+        assert_eq!(
+            plan.extensions,
+            vec![String::from(".mdx"), String::from(".tsx")]
+        );
         assert_eq!(plan.root.as_deref(), Some("."));
-        assert_eq!(plan.define.get("__BUILD_FLAG__").map(String::as_str), Some("true"));
-        assert_eq!(plan.define.get("process.env.APP_NAME").map(String::as_str), Some("\"Yolo Fixture\""));
+        assert_eq!(
+            plan.define.get("__BUILD_FLAG__").map(String::as_str),
+            Some("true")
+        );
+        assert_eq!(
+            plan.define.get("process.env.APP_NAME").map(String::as_str),
+            Some("\"Yolo Fixture\"")
+        );
         assert_eq!(plan.external, vec![String::from("sharp")]);
-        assert!(plan.unsupported.iter().any(|f| f.feature == "turbopack.debugIds"));
+        assert!(
+            plan.unsupported
+                .iter()
+                .any(|f| f.feature == "turbopack.debugIds")
+        );
     }
 
     #[test]
@@ -688,21 +803,15 @@ mod tests {
         let mut rules = BTreeMap::new();
         rules.insert(
             String::from("*.glsl"),
-            vec![TurbopackRule {
-                type_: Some(String::from("raw")),
-                ..TurbopackRule::default()
-            }],
+            vec![TurbopackRule { type_: Some(String::from("raw")), ..TurbopackRule::default() }],
         );
         let cfg = NextConfig {
-            turbopack: TurbopackConfig {
-                rules,
-                ..TurbopackConfig::default()
-            },
+            turbopack: TurbopackConfig { rules, ..TurbopackConfig::default() },
             ..NextConfig::default()
         };
         let plan = translate_turbopack(&cfg);
         assert_eq!(plan.loaders.get(".glsl"), Some(&BunLoader::Text));
-        assert!(plan.plugins.is_empty());
+        assert_eq!(plan.plugins, Vec::<BunPluginSpec>::new());
         assert_eq!(plan.extensions.len(), 6);
         assert_eq!(plan.extensions[0], ".tsx");
     }

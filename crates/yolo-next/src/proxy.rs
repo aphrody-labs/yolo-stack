@@ -6,13 +6,14 @@
 //! records which `NextResponse` capabilities the handler relies on, so the emitters can wrap it
 //! for `Bun.serve` or sketch an axum/tower middleware.
 
+use std::fmt::Write as _;
 use std::path::{Path, PathBuf};
 
 use oxc_allocator::Allocator;
 use oxc_ast::ast::{
     self, Argument, ArrowFunctionBody, BindingPattern, ChainElement, Declaration,
-    ExportDefaultDeclarationKind, Expression, ForStatementInit, ForStatementLeft,
-    ModuleExportName, ObjectPropertyKind, PropertyKey, Statement,
+    ExportDefaultDeclarationKind, Expression, ForStatementInit, ForStatementLeft, ModuleExportName,
+    ObjectPropertyKind, PropertyKey, Statement,
 };
 use oxc_parser::Parser;
 use oxc_span::SourceType;
@@ -26,19 +27,24 @@ const EXTENSIONS: [&str; 4] = ["ts", "js", "mts", "mjs"];
 
 /// Finds `proxy.(ts|js|mts|mjs)` / `middleware.(ts|js|mts|mjs)` at the root or under `src/`.
 pub fn find_proxy(root: &Path) -> Option<PathBuf> {
-    [("", "proxy"), ("src", "proxy"), ("", "middleware"), ("src", "middleware")]
-        .iter()
-        .flat_map(|(dir, stem)| {
-            EXTENSIONS.iter().map(move |ext| {
-                let name = format!("{stem}.{ext}");
-                if dir.is_empty() {
-                    root.join(name)
-                } else {
-                    root.join(dir).join(name)
-                }
-            })
+    [
+        ("", "proxy"),
+        ("src", "proxy"),
+        ("", "middleware"),
+        ("src", "middleware"),
+    ]
+    .iter()
+    .flat_map(|(dir, stem)| {
+        EXTENSIONS.iter().map(move |ext| {
+            let name = format!("{stem}.{ext}");
+            if dir.is_empty() {
+                root.join(name)
+            } else {
+                root.join(dir).join(name)
+            }
         })
-        .find(|path| path.is_file())
+    })
+    .find(|path| path.is_file())
 }
 
 fn file_stem(file: &str) -> &str {
@@ -74,10 +80,9 @@ fn matchers_from(config: &Value) -> Vec<RouteRule> {
     items
         .into_iter()
         .filter_map(|item| match item {
-            Value::String(source) => Some(RouteRule {
-                source: source.clone(),
-                ..RouteRule::default()
-            }),
+            Value::String(source) => {
+                Some(RouteRule { source: source.clone(), ..RouteRule::default() })
+            }
             Value::Object(object) => Some(RouteRule {
                 source: object.get("source")?.as_str()?.to_owned(),
                 locale: object.get("locale").and_then(Value::as_bool),
@@ -249,7 +254,9 @@ impl Usage<'_> {
             Statement::LabeledStatement(stmt) => self.visit_statement(&stmt.body),
             Statement::ExportDeclaration(export) => self.visit_declaration(&export.declaration),
             Statement::ExportDefaultDeclaration(export) => match &export.declaration {
-                ExportDefaultDeclarationKind::FunctionDeclaration(func) => self.visit_function(func),
+                ExportDefaultDeclarationKind::FunctionDeclaration(func) => {
+                    self.visit_function(func);
+                }
                 ExportDefaultDeclarationKind::ClassDeclaration(class) => self.visit_class(class),
                 other => {
                     if let Some(expr) = other.as_expression() {
@@ -301,7 +308,7 @@ impl Usage<'_> {
         }
         if callee
             .get_member_expr()
-            .and_then(|member| member.static_property_name())
+            .and_then(ast::MemberExpression::static_property_name)
             .is_some_and(|name| name == "waitUntil")
         {
             self.spec.uses_wait_until = true;
@@ -329,6 +336,10 @@ impl Usage<'_> {
         }
     }
 
+    #[allow(
+        clippy::too_many_lines,
+        reason = "flat exhaustive match over Expression variants"
+    )]
     fn visit_expression(&mut self, expr: &Expression<'_>) {
         let inner = expr.get_inner_expression();
         match inner {
@@ -501,7 +512,7 @@ fn analyze_exports(program: &ast::Program<'_>, spec: &mut ProxySpec) {
 
 fn apply_named_export(spec: &mut ProxySpec, name: &str, init: Option<&Expression<'_>>) {
     match name {
-        "proxy" | "middleware" | "default" => spec.export_name = name.to_owned(),
+        "proxy" | "middleware" | "default" => name.clone_into(&mut spec.export_name),
         "config" => {
             if let Some(value) = init.and_then(expression_to_json) {
                 spec.matchers = matchers_from(&value);
@@ -528,9 +539,10 @@ pub fn analyze_proxy(source: &str, file: &str) -> ProxySpec {
     let allocator = Allocator::default();
     let parsed = Parser::new(&allocator, source, source_type_for(file)).parse();
     if parsed.fatal_error || !parsed.diagnostics.is_empty() {
-        for diagnostic in parsed.diagnostics.iter() {
-            spec.diagnostics
-                .push(Diagnostic::error("proxy-parse-error", diagnostic.to_string()).with_file(file));
+        for diagnostic in &*parsed.diagnostics {
+            spec.diagnostics.push(
+                Diagnostic::error("proxy-parse-error", diagnostic.to_string()).with_file(file),
+            );
         }
         if parsed.fatal_error {
             return spec;
@@ -572,7 +584,9 @@ fn finalize_diagnostics(spec: &mut ProxySpec) {
                 "proxy-runtime-export-invalid",
                 format!("`export const runtime = \"{runtime}\"` is invalid in proxy"),
             )
-            .with_hint("proxy runs on the Node.js runtime only; remove the export (`edge` is unsupported)"),
+            .with_hint(
+                "proxy runs on the Node.js runtime only; remove the export (`edge` is unsupported)",
+            ),
         );
     }
     if spec.uses_removed_geo_ip {
@@ -627,10 +641,11 @@ pub fn emit_bun_proxy(spec: &ProxySpec) -> String {
         spec.export_name.as_str()
     };
     let mut out = String::new();
-    out.push_str(&format!(
-        "// Generated by yolo-next from {}. Bun.serve wrapper around the Next.js proxy (@yolo-rs/next).\n",
+    _ = writeln!(
+        out,
+        "// Generated by yolo-next from {}. Bun.serve wrapper around the Next.js proxy (@yolo-rs/next).",
         spec.file
-    ));
+    );
     if renamed {
         out.push_str("// The original src/proxy.ts is imported as ./proxy.next (rename it to src/proxy.next.ts).\n");
     }
@@ -649,15 +664,20 @@ pub fn emit_bun_proxy(spec: &ProxySpec) -> String {
          // `next/server` (NextResponse, NextRequest) is aliased to @yolo-rs/next/server by yolo.bundler.ts.\n",
     );
     out.push_str("import { compileSource, conditionMatches, type CompiledPattern } from \"@yolo-rs/next/rules\";\n");
-    out.push_str(&format!("import * as proxyModule from {};\n\n", ts_string(&import_path)));
+    _ = write!(
+        out,
+        "import * as proxyModule from {};\n\n",
+        ts_string(&import_path)
+    );
     out.push_str(
         "type ProxyResult = Response | undefined | null | void;\n\
          type ProxyHandler = (\n  request: Request,\n  event: { waitUntil(promise: Promise<unknown>): void },\n) => ProxyResult | Promise<ProxyResult>;\n\n",
     );
-    out.push_str(&format!(
+    _ = write!(
+        out,
         "const handler = (proxyModule as Record<string, unknown>)[{}] as ProxyHandler;\n\n",
         ts_string(export_name)
-    ));
+    );
     out.push_str(
         "interface Condition {\n  type: string;\n  key?: string;\n  value?: string;\n}\n\n\
          interface Matcher {\n  source: string;\n  has: Condition[];\n  missing: Condition[];\n  pattern: CompiledPattern;\n}\n\n",
@@ -665,11 +685,13 @@ pub fn emit_bun_proxy(spec: &ProxySpec) -> String {
     out.push_str("const MATCHERS: Matcher[] = [\n");
     for matcher in &spec.matchers {
         let has = serde_json::to_string(&matcher.has).unwrap_or_else(|_| String::from("[]"));
-        let missing = serde_json::to_string(&matcher.missing).unwrap_or_else(|_| String::from("[]"));
+        let missing =
+            serde_json::to_string(&matcher.missing).unwrap_or_else(|_| String::from("[]"));
         let source = ts_string(&matcher.source);
-        out.push_str(&format!(
-            "  {{ source: {source}, has: {has}, missing: {missing}, pattern: compileSource({source}) }},\n"
-        ));
+        _ = writeln!(
+            out,
+            "  {{ source: {source}, has: {has}, missing: {missing}, pattern: compileSource({source}) }},"
+        );
     }
     out.push_str("];\n\n");
     out.push_str(
@@ -712,23 +734,25 @@ pub fn emit_axum_proxy(spec: &ProxySpec) -> String {
         spec.export_name.as_str()
     };
     let mut out = String::new();
-    out.push_str(&format!(
+    _ = write!(
+        out,
         "//! Generated by yolo-next from {}: axum 0.8 / tower middleware skeleton for the Next.js proxy.\n//!\n//! Port the body of `{export_name}` into [`proxy_middleware`]; the matcher table mirrors `config.matcher`.\n\n",
         spec.file
-    ));
+    );
     out.push_str("use axum::extract::Request;\nuse axum::middleware::Next;\nuse axum::response::Response;\n\n");
     out.push_str("/// Matchers from `config.matcher` in axum 0.8 syntax (`{param}`, `{*rest}`).\n");
     out.push_str("pub const PROXY_MATCHERS: &[&str] = &[\n");
     for matcher in &spec.matchers {
         let pattern = compile_source(&matcher.source)
             .map_or_else(|_| matcher.source.clone(), |p| p.axum_pattern());
-        out.push_str(&format!("    {pattern:?},"));
+        _ = write!(out, "    {pattern:?},");
         if !matcher.has.is_empty() || !matcher.missing.is_empty() {
-            out.push_str(&format!(
+            _ = write!(
+                out,
                 " // has: {}, missing: {}",
                 serde_json::to_string(&matcher.has).unwrap_or_default(),
                 serde_json::to_string(&matcher.missing).unwrap_or_default()
-            ));
+            );
         }
         out.push('\n');
     }
@@ -784,7 +808,9 @@ pub fn emit_axum_proxy(spec: &ProxySpec) -> String {
         out.push_str("    //   event.waitUntil(promise) -> tokio::spawn(async move { ... })\n");
     }
     if spec.uses_removed_geo_ip {
-        out.push_str("    //   request.geo / request.ip -> read x-forwarded-for / platform headers\n");
+        out.push_str(
+            "    //   request.geo / request.ip -> read x-forwarded-for / platform headers\n",
+        );
     }
     out.push_str("    next.run(req).await\n}\n");
     out
@@ -860,13 +886,20 @@ export const config = { matcher: "/((?!_next/static|favicon.ico).*)" };
         assert_eq!(spec.runtime_export.as_deref(), Some("edge"));
         assert!(spec.uses_wait_until);
         assert!(spec.uses_removed_geo_ip);
-        assert!(!spec.uses_next_headers, "NextResponse.next() without request headers");
+        assert!(
+            !spec.uses_next_headers,
+            "NextResponse.next() without request headers"
+        );
         assert_eq!(spec.matchers.len(), 1);
         let codes: Vec<&str> = spec.diagnostics.iter().map(|d| d.code.as_str()).collect();
         assert!(codes.contains(&"middleware-renamed-to-proxy"));
         assert!(codes.contains(&"proxy-runtime-export-invalid"));
         assert!(codes.contains(&"proxy-geo-ip-removed"));
-        let runtime = spec.diagnostics.iter().find(|d| d.code == "proxy-runtime-export-invalid").unwrap();
+        let runtime = spec
+            .diagnostics
+            .iter()
+            .find(|d| d.code == "proxy-runtime-export-invalid")
+            .unwrap();
         assert_eq!(runtime.severity, Severity::Error);
         assert_eq!(runtime.file.as_deref(), Some("src/middleware.ts"));
     }
@@ -883,11 +916,25 @@ export { handler as proxy, config };
         assert_eq!(spec.matchers.len(), 2);
         assert_eq!(spec.matchers[1].has[0].value.as_deref(), Some("b"));
         assert_eq!(spec.matchers[1].locale, Some(false));
-        assert!(spec.diagnostics.iter().any(|d| d.code == "proxy-matcher-invalid"));
+        assert!(
+            spec.diagnostics
+                .iter()
+                .any(|d| d.code == "proxy-matcher-invalid")
+        );
         let missing = analyze_proxy("export const other = 1;", "proxy.ts");
-        assert!(missing.diagnostics.iter().any(|d| d.code == "proxy-export-missing"));
+        assert!(
+            missing
+                .diagnostics
+                .iter()
+                .any(|d| d.code == "proxy-export-missing")
+        );
         let broken = analyze_proxy("export function proxy( {", "proxy.ts");
-        assert!(broken.diagnostics.iter().any(|d| d.code == "proxy-parse-error"));
+        assert!(
+            broken
+                .diagnostics
+                .iter()
+                .any(|d| d.code == "proxy-parse-error")
+        );
     }
 
     #[test]
@@ -915,7 +962,9 @@ export { handler as proxy, config };
     fn emits_axum_skeleton() {
         let spec = analyze_proxy(FIXTURE_PROXY, "proxy.ts");
         let rust = emit_axum_proxy(&spec);
-        assert!(rust.contains("pub async fn proxy_middleware(req: Request, next: Next) -> Response"));
+        assert!(
+            rust.contains("pub async fn proxy_middleware(req: Request, next: Next) -> Response")
+        );
         assert!(rust.contains("\"/dashboard/{*path}\","));
         assert!(
             rust.contains("\"/api/{*path}\", // has: [], missing: [{\"type\":\"header\",\"key\":\"x-internal\"}]"),

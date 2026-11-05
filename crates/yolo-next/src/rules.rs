@@ -12,6 +12,7 @@
 //! regex engine ([`mini_re`]) so the crate stays dependency-free.
 
 use std::collections::BTreeMap;
+use std::fmt::Write as _;
 
 use serde::{Deserialize, Serialize};
 use serde_json::{Value, json};
@@ -84,11 +85,7 @@ fn pieces(segments: &[PatternSegment]) -> Vec<Piece<'_>> {
     for segment in segments {
         match segment {
             PatternSegment::Static { text } => out.push(Piece::Static(text)),
-            PatternSegment::Param {
-                name,
-                modifier,
-                regex,
-            } => {
+            PatternSegment::Param { name, modifier, regex } => {
                 let mut slash = false;
                 if *modifier != ParamModifier::One
                     && let Some(Piece::Static(text)) = out.last()
@@ -110,9 +107,7 @@ fn pieces(segments: &[PatternSegment]) -> Vec<Piece<'_>> {
                 });
             }
             PatternSegment::Wildcard => {
-                out.push(Piece::Wildcard {
-                    index: wildcard_index,
-                });
+                out.push(Piece::Wildcard { index: wildcard_index });
                 wildcard_index += 1;
             }
         }
@@ -160,18 +155,8 @@ fn match_pieces(
                 .all(|(a, b)| a.eq_ignore_ascii_case(b));
             same && match_pieces(rest, path, pos + wanted.len(), caps)
         }
-        Piece::Param {
-            name,
-            modifier,
-            regex,
-            slash,
-        } => {
-            let param = ParamPiece {
-                name,
-                modifier: *modifier,
-                regex: *regex,
-                slash: *slash,
-            };
+        Piece::Param { name, modifier, regex, slash } => {
+            let param = ParamPiece { name, modifier: *modifier, regex: *regex, slash: *slash };
             match_param(rest, path, pos, caps, &param)
         }
         Piece::Wildcard { index } => {
@@ -304,9 +289,9 @@ impl CompiledPattern {
                 PatternSegment::Static { text } => out.push_str(text),
                 PatternSegment::Param { name, modifier, .. } => match modifier {
                     ParamModifier::ZeroOrMore | ParamModifier::OneOrMore if last => {
-                        out.push_str(&format!("{{*{name}}}"));
+                        _ = write!(out, "{{*{name}}}");
                     }
-                    _ => out.push_str(&format!("{{{name}}}")),
+                    _ => _ = write!(out, "{{{name}}}"),
                 },
                 PatternSegment::Wildcard => {
                     let name = if wildcards == 0 {
@@ -316,9 +301,9 @@ impl CompiledPattern {
                     };
                     wildcards += 1;
                     if last {
-                        out.push_str(&format!("{{*{name}}}"));
+                        _ = write!(out, "{{*{name}}}");
                     } else {
-                        out.push_str(&format!("{{{name}}}"));
+                        _ = write!(out, "{{{name}}}");
                     }
                 }
             }
@@ -332,12 +317,7 @@ impl CompiledPattern {
         for piece in pieces(&self.segments) {
             match piece {
                 Piece::Static(text) => out.push_str(&regex_escape(text)),
-                Piece::Param {
-                    name,
-                    modifier,
-                    regex,
-                    slash,
-                } => {
+                Piece::Param { name, modifier, regex, slash } => {
                     let prefix = if slash { "/" } else { "" };
                     let group = match modifier {
                         ParamModifier::One => {
@@ -405,9 +385,7 @@ fn read_group(chars: &[char], open: usize, source: &str) -> Result<(String, usiz
 
 fn flush_static(text: &mut String, segments: &mut Vec<PatternSegment>) {
     if !text.is_empty() {
-        segments.push(PatternSegment::Static {
-            text: std::mem::take(text),
-        });
+        segments.push(PatternSegment::Static { text: std::mem::take(text) });
     }
 }
 
@@ -458,11 +436,7 @@ pub fn compile_source(source: &str) -> Result<CompiledPattern, Diagnostic> {
                 if modifier != ParamModifier::One {
                     j += 1;
                 }
-                segments.push(PatternSegment::Param {
-                    name,
-                    modifier,
-                    regex,
-                });
+                segments.push(PatternSegment::Param { name, modifier, regex });
                 i = j;
             }
             '(' => {
@@ -486,10 +460,7 @@ pub fn compile_source(source: &str) -> Result<CompiledPattern, Diagnostic> {
         }
     }
     flush_static(&mut text, &mut segments);
-    Ok(CompiledPattern {
-        source: source.to_owned(),
-        segments,
-    })
+    Ok(CompiledPattern { source: source.to_owned(), segments })
 }
 
 /// Substitutes `:param` placeholders in a destination (`/blog/:slug`, `https://x/:path*`).
@@ -528,7 +499,11 @@ pub fn redirect_status(rule: &RouteRule) -> u16 {
     if let Some(code) = rule.status_code {
         return code;
     }
-    if rule.permanent == Some(true) { 308 } else { 307 }
+    if rule.permanent == Some(true) {
+        308
+    } else {
+        307
+    }
 }
 
 /// A `has` value is treated as a regex when it uses regex syntax; otherwise it is compared
@@ -779,11 +754,7 @@ pub mod mini_re {
                 // Lazy quantifier: the end-position set is identical for a full match.
                 self.pos += 1;
             }
-            Node::Repeat {
-                node: Box::new(atom),
-                min,
-                max,
-            }
+            Node::Repeat { node: Box::new(atom), min, max }
         }
 
         fn parse_group(&mut self) -> Option<Node> {
@@ -825,10 +796,7 @@ pub mod mini_re {
         }
 
         fn escape(c: char) -> Node {
-            let class = |items: Vec<ClassItem>| Node::Class {
-                negated: false,
-                items,
-            };
+            let class = |items: Vec<ClassItem>| Node::Class { negated: false, items };
             match c {
                 'd' => class(vec![ClassItem::Digit(false)]),
                 'D' => class(vec![ClassItem::Digit(true)]),
@@ -883,10 +851,7 @@ pub mod mini_re {
 
     fn parse(pattern: &str) -> Option<Vec<Vec<Node>>> {
         let chars: Vec<char> = pattern.chars().collect();
-        let mut parser = Parser {
-            chars: &chars,
-            pos: 0,
-        };
+        let mut parser = Parser { chars: &chars, pos: 0 };
         let alternatives = parser.parse_alternation()?;
         (parser.pos == chars.len()).then_some(alternatives)
     }
@@ -1170,10 +1135,7 @@ mod tests {
             &query,
             "example.com"
         ));
-        let header_regex = RouteCondition {
-            value: Some(String::from("(1|2)")),
-            ..header.clone()
-        };
+        let header_regex = RouteCondition { value: Some(String::from("(1|2)")), ..header.clone() };
         assert!(condition_matches(
             &header_regex,
             &headers,
@@ -1261,10 +1223,7 @@ mod tests {
         };
         let manifest = rules_manifest_json(&cfg);
         assert_eq!(manifest["redirects"][0]["statusCode"], 308);
-        assert_eq!(
-            manifest["redirects"][0]["regex"],
-            "^/old/(?<slug>[^/]+)/?$"
-        );
+        assert_eq!(manifest["redirects"][0]["regex"], "^/old/(?<slug>[^/]+)/?$");
         assert_eq!(
             manifest["rewrites"]["afterFiles"][0]["source"],
             "/u/:username"

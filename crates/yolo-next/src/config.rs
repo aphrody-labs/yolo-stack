@@ -56,10 +56,15 @@ const MAX_DEPTH: usize = 32;
 
 /// Finds `next.config.{ts,mts,mjs,js}` under `root` (first match in that order).
 pub fn find_next_config(root: &Path) -> Option<PathBuf> {
-    ["next.config.ts", "next.config.mts", "next.config.mjs", "next.config.js"]
-        .iter()
-        .map(|name| root.join(name))
-        .find(|path| path.is_file())
+    [
+        "next.config.ts",
+        "next.config.mts",
+        "next.config.mjs",
+        "next.config.js",
+    ]
+    .iter()
+    .map(|name| root.join(name))
+    .find(|path| path.is_file())
 }
 
 fn source_type_for(file_name: &str) -> SourceType {
@@ -143,10 +148,12 @@ fn env_var_name(expr: &Expression<'_>) -> Option<String> {
 
 fn is_import_meta_property(expr: &Expression<'_>, property: &str) -> bool {
     expr.get_member_expr().is_some_and(|member| {
-        matches!(member.object().get_inner_expression(), Expression::ImportMeta(_))
-            && member
-                .static_property_name()
-                .is_some_and(|name| name == property)
+        matches!(
+            member.object().get_inner_expression(),
+            Expression::ImportMeta(_)
+        ) && member
+            .static_property_name()
+            .is_some_and(|name| name == property)
     })
 }
 
@@ -290,10 +297,14 @@ impl<'a, 'x> Evaluator<'a, 'x> {
                 self.bind_declarators(decl);
             }
         }
-        let returned = body.statements.iter().rev().find_map(|statement| match statement {
-            Statement::ReturnStatement(ret) => ret.argument.as_ref(),
-            _ => None,
-        });
+        let returned = body
+            .statements
+            .iter()
+            .rev()
+            .find_map(|statement| match statement {
+                Statement::ReturnStatement(ret) => ret.argument.as_ref(),
+                _ => None,
+            });
         let result = returned.and_then(|expr| f(self, expr));
         self.bindings = saved_bindings;
         self.locals.truncate(saved_locals);
@@ -302,13 +313,13 @@ impl<'a, 'x> Evaluator<'a, 'x> {
 
     fn function_value(&mut self, func: &'x ast::Function<'a>) -> Option<Value> {
         let body = func.body.as_deref()?;
-        self.with_scope(&func.params, body, |ev, ret| ev.eval(ret))
+        self.with_scope(&func.params, body, Self::eval)
     }
 
     fn arrow_value(&mut self, arrow: &'x ast::ArrowFunctionExpression<'a>) -> Option<Value> {
         match &arrow.body {
             ArrowFunctionBody::FunctionBody(body) => {
-                self.with_scope(&arrow.params, body, |ev, ret| ev.eval(ret))
+                self.with_scope(&arrow.params, body, Self::eval)
             }
             other => other.as_expression().and_then(|expr| self.eval(expr)),
         }
@@ -345,8 +356,8 @@ impl<'a, 'x> Evaluator<'a, 'x> {
                 Some(Value::String(lit.regex.pattern.text.to_string()))
             }
             Expression::Identifier(id) => self.eval_identifier(id.name.as_str(), inner),
-            Expression::ArrayExpression(array) => self.eval_array(array),
-            Expression::ObjectExpression(object) => self.eval_object(object),
+            Expression::ArrayExpression(array) => Some(self.eval_array(array)),
+            Expression::ObjectExpression(object) => Some(self.eval_object(object)),
             Expression::StaticMemberExpression(_)
             | Expression::ComputedMemberExpression(_)
             | Expression::ChainExpression(_) => self.eval_member(inner),
@@ -417,7 +428,7 @@ impl<'a, 'x> Evaluator<'a, 'x> {
         None
     }
 
-    fn eval_array(&mut self, array: &'x ast::ArrayExpression<'a>) -> Option<Value> {
+    fn eval_array(&mut self, array: &'x ast::ArrayExpression<'a>) -> Value {
         let mut out = Vec::new();
         for element in &array.elements {
             match element {
@@ -437,7 +448,7 @@ impl<'a, 'x> Evaluator<'a, 'x> {
                 }
             }
         }
-        Some(Value::Array(out))
+        Value::Array(out)
     }
 
     fn spread_unsupported(&mut self, argument: &Expression<'a>) {
@@ -453,12 +464,14 @@ impl<'a, 'x> Evaluator<'a, 'x> {
         } else {
             self.diagnostics.push(Diagnostic::warning(
                 "next-config-spread-unsupported",
-                format!("spread `...{snippet}` cannot be evaluated statically; its entries are missing"),
+                format!(
+                    "spread `...{snippet}` cannot be evaluated statically; its entries are missing"
+                ),
             ));
         }
     }
 
-    fn eval_object(&mut self, object: &'x ast::ObjectExpression<'a>) -> Option<Value> {
+    fn eval_object(&mut self, object: &'x ast::ObjectExpression<'a>) -> Value {
         let mut map = Map::new();
         for property in &object.properties {
             match property {
@@ -480,7 +493,7 @@ impl<'a, 'x> Evaluator<'a, 'x> {
                 }
             }
         }
-        Some(Value::Object(map))
+        Value::Object(map)
     }
 
     fn eval_member(&mut self, expr: &'x Expression<'a>) -> Option<Value> {
@@ -531,17 +544,28 @@ impl<'a, 'x> Evaluator<'a, 'x> {
         }
         let name = callee_name(callee);
         match name.as_str() {
-            "dirname" if args.first().is_some_and(|arg| is_file_url_to_path_call(arg)) => {
+            "dirname"
+                if args
+                    .first()
+                    .is_some_and(|arg| is_file_url_to_path_call(arg)) =>
+            {
                 Some(Value::String(String::from(".")))
             }
-            "fileURLToPath" if args.first().is_some_and(|arg| is_import_meta_property(arg, "url")) => {
+            "fileURLToPath"
+                if args
+                    .first()
+                    .is_some_and(|arg| is_import_meta_property(arg, "url")) =>
+            {
                 Some(Value::String(String::from("./next.config.js")))
             }
             "join" | "resolve" | "normalize" => self.join_paths(&args),
             "freeze" | "defineConfig" | "defineNextConfig" => {
                 args.first().and_then(|arg| self.eval(arg))
             }
-            "String" => self.eval(args.first()?).and_then(|v| scalar_text(&v)).map(Value::String),
+            "String" => self
+                .eval(args.first()?)
+                .and_then(|v| scalar_text(&v))
+                .map(Value::String),
             "Number" | "parseInt" | "parseFloat" => {
                 let value = self.eval(args.first()?)?;
                 match value {
@@ -551,7 +575,10 @@ impl<'a, 'x> Evaluator<'a, 'x> {
                     _ => None,
                 }
             }
-            "Boolean" => self.eval(args.first()?).and_then(|v| truthy(&v)).map(Value::Bool),
+            "Boolean" => self
+                .eval(args.first()?)
+                .and_then(|v| truthy(&v))
+                .map(Value::Bool),
             _ => {
                 self.dynamic(expr, "function call");
                 None
@@ -677,7 +704,9 @@ impl<'a, 'x> Evaluator<'a, 'x> {
         }
         match binary.operator {
             BinaryOperator::Addition => match (&left, &right) {
-                (Value::Number(a), Value::Number(b)) => Some(number_value(a.as_f64()? + b.as_f64()?)),
+                (Value::Number(a), Value::Number(b)) => {
+                    Some(number_value(a.as_f64()? + b.as_f64()?))
+                }
                 _ => Some(Value::String(format!(
                     "{}{}",
                     scalar_text(&left)?,
@@ -685,9 +714,7 @@ impl<'a, 'x> Evaluator<'a, 'x> {
                 ))),
             },
             BinaryOperator::Subtraction => Some(number_value(left.as_f64()? - right.as_f64()?)),
-            BinaryOperator::Multiplication => {
-                Some(number_value(left.as_f64()? * right.as_f64()?))
-            }
+            BinaryOperator::Multiplication => Some(number_value(left.as_f64()? * right.as_f64()?)),
             BinaryOperator::Division => Some(number_value(left.as_f64()? / right.as_f64()?)),
             BinaryOperator::StrictEquality | BinaryOperator::Equality => {
                 Some(Value::Bool(left == right))
@@ -733,7 +760,7 @@ impl<'a, 'x> Evaluator<'a, 'x> {
         }
         self.depth += 1;
         let result = match expr.get_inner_expression() {
-            Expression::ObjectExpression(object) => self.eval_object(object),
+            Expression::ObjectExpression(object) => Some(self.eval_object(object)),
             Expression::Identifier(id) => self.resolve_name(id.name.as_str(), wrappers, phase),
             Expression::CallExpression(call) => self.resolve_wrapper(call, wrappers, phase),
             Expression::ArrowFunctionExpression(arrow) => {
@@ -942,7 +969,9 @@ pub fn parse_next_config(
         let mut errors: Vec<Diagnostic> = parsed
             .diagnostics
             .iter()
-            .map(|d| Diagnostic::error("next-config-parse-error", d.to_string()).with_file(file_name))
+            .map(|d| {
+                Diagnostic::error("next-config-parse-error", d.to_string()).with_file(file_name)
+            })
             .collect();
         if errors.is_empty() {
             errors.push(
@@ -1031,12 +1060,16 @@ pub fn object_literal_to_json(source: &str) -> Result<Value, Vec<Diagnostic>> {
             .map(|d| Diagnostic::error("object-literal-parse-error", d.to_string()))
             .collect());
     }
-    let init = parsed.program.body.iter().find_map(|statement| match statement {
-        Statement::VariableDeclaration(decl) => {
-            decl.declarations.first().and_then(|d| d.init.as_ref())
-        }
-        _ => None,
-    });
+    let init = parsed
+        .program
+        .body
+        .iter()
+        .find_map(|statement| match statement {
+            Statement::VariableDeclaration(decl) => {
+                decl.declarations.first().and_then(|d| d.init.as_ref())
+            }
+            _ => None,
+        });
     let Some(init) = init else {
         return Err(vec![Diagnostic::error(
             "object-literal-parse-error",
@@ -1247,10 +1280,9 @@ fn turbopack_loaders(value: Option<&Value>) -> Vec<TurbopackLoader> {
             items
                 .iter()
                 .filter_map(|item| match item {
-                    Value::String(loader) => Some(TurbopackLoader {
-                        loader: loader.clone(),
-                        options: Map::new(),
-                    }),
+                    Value::String(loader) => {
+                        Some(TurbopackLoader { loader: loader.clone(), options: Map::new() })
+                    }
                     Value::Object(object) => Some(TurbopackLoader {
                         loader: as_string(object.get("loader")?)?,
                         options: object
@@ -1286,7 +1318,10 @@ fn turbopack_rules_from(value: &Value, condition: Option<Value>) -> Vec<Turbopac
             .flat_map(|item| turbopack_rules_from(item, condition.clone()))
             .collect(),
         Value::Object(object) => {
-            if object.contains_key("loaders") || object.contains_key("as") || object.contains_key("type") {
+            if object.contains_key("loaders")
+                || object.contains_key("as")
+                || object.contains_key("type")
+            {
                 vec![TurbopackRule {
                     loaders: turbopack_loaders(object.get("loaders")),
                     as_: object.get("as").and_then(as_string),
@@ -1297,7 +1332,9 @@ fn turbopack_rules_from(value: &Value, condition: Option<Value>) -> Vec<Turbopac
                 object
                     .iter()
                     .filter(|(_, sub)| **sub != Value::Bool(false))
-                    .flat_map(|(key, sub)| turbopack_rules_from(sub, Some(Value::String(key.clone()))))
+                    .flat_map(|(key, sub)| {
+                        turbopack_rules_from(sub, Some(Value::String(key.clone())))
+                    })
                     .collect()
             }
         }
@@ -1321,9 +1358,7 @@ impl Builder {
     }
 
     fn renamed(&mut self, from: &str, to: &str) {
-        self.cfg
-            .renamed_keys
-            .push((from.to_owned(), to.to_owned()));
+        self.cfg.renamed_keys.push((from.to_owned(), to.to_owned()));
         self.diagnostics.push(Diagnostic::info(
             "next-config-renamed-key",
             format!("`{from}` is read as `{to}`"),
@@ -1344,7 +1379,9 @@ impl Builder {
                 format!("next-config-dynamic-{key}"),
                 format!("`{key}()` does not return a literal; no static manifest"),
             )
-            .with_hint("the function is awaited at startup by @yolo-rs/next; static manifest unavailable"),
+            .with_hint(
+                "the function is awaited at startup by @yolo-rs/next; static manifest unavailable",
+            ),
         );
     }
 
@@ -1456,9 +1493,8 @@ impl Builder {
             "compiler" => self.apply_compiler(value),
             "typescript" => {
                 if let Some(object) = value.as_object() {
-                    self.cfg.typescript.ignore_build_errors = object
-                        .get("ignoreBuildErrors")
-                        .is_some_and(is_truthy);
+                    self.cfg.typescript.ignore_build_errors =
+                        object.get("ignoreBuildErrors").is_some_and(is_truthy);
                     self.cfg.typescript.tsconfig_path =
                         object.get("tsconfigPath").and_then(as_string);
                 }
@@ -1545,7 +1581,9 @@ impl Builder {
                 }
                 "loader" => images.loader = as_string(v).unwrap_or_else(|| String::from("default")),
                 "loaderFile" => images.loader_file = as_string(v).unwrap_or_default(),
-                "path" => images.path = as_string(v).unwrap_or_else(|| String::from("/_next/image")),
+                "path" => {
+                    images.path = as_string(v).unwrap_or_else(|| String::from("/_next/image"));
+                }
                 "formats" => images.formats = string_list(v),
                 "deviceSizes" => images.device_sizes = number_list(v),
                 "imageSizes" => images.image_sizes = number_list(v),
@@ -1562,9 +1600,12 @@ impl Builder {
                 }
                 "unoptimized" => images.unoptimized = is_truthy(v),
                 "maximumRedirects" => {
-                    images.maximum_redirects = as_u64(v).and_then(|n| u32::try_from(n).ok()).unwrap_or(3);
+                    images.maximum_redirects =
+                        as_u64(v).and_then(|n| u32::try_from(n).ok()).unwrap_or(3);
                 }
-                "maximumResponseBody" => images.maximum_response_body = as_u64(v).unwrap_or(50_000_000),
+                "maximumResponseBody" => {
+                    images.maximum_response_body = as_u64(v).unwrap_or(50_000_000);
+                }
                 "domains" => {
                     deprecated_domains = true;
                     for hostname in string_list(v) {
@@ -1812,16 +1853,23 @@ impl Builder {
                 }
                 "outputFileTracingRoot" => {
                     self.renamed(&from, "outputFileTracingRoot");
-                    self.cfg.output_file_tracing_root =
-                        self.cfg.output_file_tracing_root.take().or_else(|| as_string(v));
+                    self.cfg.output_file_tracing_root = self
+                        .cfg
+                        .output_file_tracing_root
+                        .take()
+                        .or_else(|| as_string(v));
                 }
                 "outputFileTracingIncludes" => {
                     self.renamed(&from, "outputFileTracingIncludes");
-                    self.cfg.output_file_tracing_includes.get_or_insert_with(|| v.clone());
+                    self.cfg
+                        .output_file_tracing_includes
+                        .get_or_insert_with(|| v.clone());
                 }
                 "outputFileTracingExcludes" => {
                     self.renamed(&from, "outputFileTracingExcludes");
-                    self.cfg.output_file_tracing_excludes.get_or_insert_with(|| v.clone());
+                    self.cfg
+                        .output_file_tracing_excludes
+                        .get_or_insert_with(|| v.clone());
                 }
                 "skipMiddlewareUrlNormalize" => {
                     self.renamed(&from, "skipProxyUrlNormalize");
@@ -1843,10 +1891,7 @@ impl Builder {
 /// Function-valued keys are expected as [`FUNCTION_MARKER`] strings when they could not be
 /// evaluated; `redirects`/`rewrites`/`headers` then set their `*_dynamic` flag.
 pub fn next_config_from_value(value: &Value) -> (NextConfig, Vec<Diagnostic>) {
-    let mut builder = Builder {
-        cfg: NextConfig::default(),
-        diagnostics: Vec::new(),
-    };
+    let mut builder = Builder { cfg: NextConfig::default(), diagnostics: Vec::new() };
     let Some(object) = value.as_object() else {
         builder.diagnostics.push(Diagnostic::error(
             "next-config-not-object",
@@ -1956,12 +2001,7 @@ fn merge_cache_life(
 }
 
 fn feature(name: impl Into<String>, support: Support, note: impl Into<String>) -> FeatureStatus {
-    FeatureStatus {
-        feature: name.into(),
-        support,
-        note: note.into(),
-        target: None,
-    }
+    FeatureStatus { feature: name.into(), support, note: note.into(), target: None }
 }
 
 fn mapped_features(cfg: &NextConfig, output: OutputMode, out: &mut Vec<FeatureStatus>) {
@@ -1970,40 +2010,144 @@ fn mapped_features(cfg: &NextConfig, output: OutputMode, out: &mut Vec<FeatureSt
             out.push(feature(name, Support::Mapped, note));
         }
     };
-    mapped("reactStrictMode", cfg.react_strict_mode.is_some(), "React <StrictMode> wrapper");
-    mapped("basePath", !cfg.base_path.is_empty(), "prefixes routes, static routes and rules");
-    mapped("assetPrefix", !cfg.asset_prefix.is_empty(), "CDN origin for hashed assets");
-    mapped("trailingSlash", cfg.trailing_slash, "Bun.serve normalises trailing slashes");
-    mapped("compress", cfg.compress.is_some(), "gzip/zstd negotiated by the Bun server");
-    mapped("poweredByHeader", cfg.powered_by_header.is_some(), "x-powered-by: Yolo");
-    mapped("generateEtags", cfg.generate_etags.is_some(), "ETag on dynamic responses");
+    mapped(
+        "reactStrictMode",
+        cfg.react_strict_mode.is_some(),
+        "React <StrictMode> wrapper",
+    );
+    mapped(
+        "basePath",
+        !cfg.base_path.is_empty(),
+        "prefixes routes, static routes and rules",
+    );
+    mapped(
+        "assetPrefix",
+        !cfg.asset_prefix.is_empty(),
+        "CDN origin for hashed assets",
+    );
+    mapped(
+        "trailingSlash",
+        cfg.trailing_slash,
+        "Bun.serve normalises trailing slashes",
+    );
+    mapped(
+        "compress",
+        cfg.compress.is_some(),
+        "gzip/zstd negotiated by the Bun server",
+    );
+    mapped(
+        "poweredByHeader",
+        cfg.powered_by_header.is_some(),
+        "x-powered-by: Yolo",
+    );
+    mapped(
+        "generateEtags",
+        cfg.generate_etags.is_some(),
+        "ETag on dynamic responses",
+    );
     mapped("env", !cfg.env.is_empty(), "inlined with Bun.build define");
-    mapped("images.remotePatterns", !cfg.images.remote_patterns.is_empty(), "optimizer allow-list");
-    mapped("images.localPatterns", cfg.images.local_patterns.is_some(), "optimizer allow-list");
-    mapped("images.formats", cfg.images.formats != ImagesConfig::default().formats, "Accept negotiation");
-    mapped("images.deviceSizes", cfg.images.device_sizes != ImagesConfig::default().device_sizes, "srcset breakpoints");
-    mapped("images.imageSizes", cfg.images.image_sizes != ImagesConfig::default().image_sizes, "srcset widths");
-    mapped("images.qualities", cfg.images.qualities != ImagesConfig::default().qualities, "allowed q values");
-    mapped("images.minimumCacheTTL", cfg.images.minimum_cache_ttl != 14_400, "optimizer Cache-Control");
-    mapped("images.unoptimized", cfg.images.unoptimized, "<Image> passes src through");
-    mapped("images.loader", cfg.images.loader != "default", "loader URL builder");
-    mapped("redirects", !cfg.redirects.is_empty(), "static manifest (path-to-regexp subset)");
+    mapped(
+        "images.remotePatterns",
+        !cfg.images.remote_patterns.is_empty(),
+        "optimizer allow-list",
+    );
+    mapped(
+        "images.localPatterns",
+        cfg.images.local_patterns.is_some(),
+        "optimizer allow-list",
+    );
+    mapped(
+        "images.formats",
+        cfg.images.formats != ImagesConfig::default().formats,
+        "Accept negotiation",
+    );
+    mapped(
+        "images.deviceSizes",
+        cfg.images.device_sizes != ImagesConfig::default().device_sizes,
+        "srcset breakpoints",
+    );
+    mapped(
+        "images.imageSizes",
+        cfg.images.image_sizes != ImagesConfig::default().image_sizes,
+        "srcset widths",
+    );
+    mapped(
+        "images.qualities",
+        cfg.images.qualities != ImagesConfig::default().qualities,
+        "allowed q values",
+    );
+    mapped(
+        "images.minimumCacheTTL",
+        cfg.images.minimum_cache_ttl != 14_400,
+        "optimizer Cache-Control",
+    );
+    mapped(
+        "images.unoptimized",
+        cfg.images.unoptimized,
+        "<Image> passes src through",
+    );
+    mapped(
+        "images.loader",
+        cfg.images.loader != "default",
+        "loader URL builder",
+    );
+    mapped(
+        "redirects",
+        !cfg.redirects.is_empty(),
+        "static manifest (path-to-regexp subset)",
+    );
     let any_rewrite = !cfg.rewrites.before_files.is_empty()
         || !cfg.rewrites.after_files.is_empty()
         || !cfg.rewrites.fallback.is_empty();
-    mapped("rewrites", any_rewrite, "beforeFiles/afterFiles/fallback phases");
+    mapped(
+        "rewrites",
+        any_rewrite,
+        "beforeFiles/afterFiles/fallback phases",
+    );
     mapped("headers", !cfg.headers.is_empty(), "static manifest");
-    mapped("cacheLife", !cfg.cache_life.is_empty(), "profiles merged with the built-ins");
-    mapped("cacheComponents", cfg.cache_components, "use cache + Suspense boundaries");
+    mapped(
+        "cacheLife",
+        !cfg.cache_life.is_empty(),
+        "profiles merged with the built-ins",
+    );
+    mapped(
+        "cacheComponents",
+        cfg.cache_components,
+        "use cache + Suspense boundaries",
+    );
     mapped("typedRoutes", cfg.typed_routes, "routeTree.gen.ts typing");
-    mapped("transpilePackages", !cfg.transpile_packages.is_empty(), "Bun bundles workspace packages");
-    mapped("serverExternalPackages", !cfg.server_external_packages.is_empty(), "Bun.build external");
-    mapped("deploymentId", cfg.deployment_id.is_some(), "?dpl= skew protection");
-    mapped("pageExtensions", cfg.page_extensions != DEFAULT_PAGE_EXTENSIONS, "route scanner extensions");
+    mapped(
+        "transpilePackages",
+        !cfg.transpile_packages.is_empty(),
+        "Bun bundles workspace packages",
+    );
+    mapped(
+        "serverExternalPackages",
+        !cfg.server_external_packages.is_empty(),
+        "Bun.build external",
+    );
+    mapped(
+        "deploymentId",
+        cfg.deployment_id.is_some(),
+        "?dpl= skew protection",
+    );
+    mapped(
+        "pageExtensions",
+        cfg.page_extensions != DEFAULT_PAGE_EXTENSIONS,
+        "route scanner extensions",
+    );
     match output {
-        OutputMode::Standalone => out.push(feature("output: standalone", Support::Mapped, "bun build --compile")),
+        OutputMode::Standalone => out.push(feature(
+            "output: standalone",
+            Support::Mapped,
+            "bun build --compile",
+        )),
         OutputMode::Export => out.push(feature("output: export", Support::Mapped, "static export")),
-        OutputMode::Server => out.push(feature("output", Support::Mapped, "Bun.serve server (default)")),
+        OutputMode::Server => out.push(feature(
+            "output",
+            Support::Mapped,
+            "Bun.serve server (default)",
+        )),
     }
 }
 
@@ -2018,9 +2162,21 @@ fn partial_features(cfg: &NextConfig, out: &mut Vec<FeatureStatus>) {
         cfg.react_compiler.as_ref().is_some_and(is_truthy),
         "Bun.build reactCompiler",
     );
-    partial("redirects (dynamic)", cfg.redirects_dynamic, "awaited at startup; no static manifest");
-    partial("rewrites (dynamic)", cfg.rewrites_dynamic, "awaited at startup; no static manifest");
-    partial("headers (dynamic)", cfg.headers_dynamic, "awaited at startup; no static manifest");
+    partial(
+        "redirects (dynamic)",
+        cfg.redirects_dynamic,
+        "awaited at startup; no static manifest",
+    );
+    partial(
+        "rewrites (dynamic)",
+        cfg.rewrites_dynamic,
+        "awaited at startup; no static manifest",
+    );
+    partial(
+        "headers (dynamic)",
+        cfg.headers_dynamic,
+        "awaited at startup; no static manifest",
+    );
     partial(
         "experimental.staleTimes",
         cfg.experimental.contains_key("staleTimes"),
@@ -2031,8 +2187,16 @@ fn partial_features(cfg: &NextConfig, out: &mut Vec<FeatureStatus>) {
         cfg.experimental.contains_key("optimizePackageImports"),
         "Bun barrel optimization",
     );
-    partial("i18n", cfg.i18n.is_some(), "Pages Router only; App Router uses proxy + [lang]");
-    partial("logging", cfg.logging.is_some(), "fetch logging via Bun server hooks");
+    partial(
+        "i18n",
+        cfg.i18n.is_some(),
+        "Pages Router only; App Router uses proxy + [lang]",
+    );
+    partial(
+        "logging",
+        cfg.logging.is_some(),
+        "fetch logging via Bun server hooks",
+    );
     partial(
         "compiler.removeConsole",
         cfg.compiler.remove_console.is_some(),
@@ -2048,9 +2212,21 @@ fn partial_features(cfg: &NextConfig, out: &mut Vec<FeatureStatus>) {
         cfg.compiler.styled_components.is_some(),
         "no SWC transform; runtime styled-components only",
     );
-    partial("compiler.emotion", cfg.compiler.emotion.is_some(), "no SWC transform; babel plugin not applied");
-    partial("compiler.relay", cfg.compiler.relay.is_some(), "run relay-compiler before bun build");
-    partial("devIndicators", cfg.dev_indicators.is_some(), "Yolo dev overlay");
+    partial(
+        "compiler.emotion",
+        cfg.compiler.emotion.is_some(),
+        "no SWC transform; babel plugin not applied",
+    );
+    partial(
+        "compiler.relay",
+        cfg.compiler.relay.is_some(),
+        "run relay-compiler before bun build",
+    );
+    partial(
+        "devIndicators",
+        cfg.dev_indicators.is_some(),
+        "Yolo dev overlay",
+    );
     partial(
         "experimental (other keys)",
         !cfg.experimental.is_empty(),
@@ -2064,22 +2240,56 @@ fn unsupported_features(cfg: &NextConfig, out: &mut Vec<FeatureStatus>) {
             out.push(feature(name, Support::Unsupported, note));
         }
     };
-    unsupported("webpack", cfg.webpack_present, "Turbopack-only; use turbopack.rules and Bun plugins");
-    unsupported("exportPathMap", cfg.export_path_map_present, "App Router manifest drives export");
-    unsupported("amp", cfg.removed_keys.iter().any(|k| k == "amp"), "AMP support removed in Next.js 16");
-    unsupported("eslint", cfg.removed_keys.iter().any(|k| k == "eslint"), "next lint removed; run oxlint/biome");
-    unsupported("sassOptions", cfg.sass_options.is_some(), "Bun has no Sass; precompile or use Lightning CSS");
-    unsupported("modularizeImports", !cfg.modularize_imports.is_empty(), "use optimizePackageImports");
+    unsupported(
+        "webpack",
+        cfg.webpack_present,
+        "Turbopack-only; use turbopack.rules and Bun plugins",
+    );
+    unsupported(
+        "exportPathMap",
+        cfg.export_path_map_present,
+        "App Router manifest drives export",
+    );
+    unsupported(
+        "amp",
+        cfg.removed_keys.iter().any(|k| k == "amp"),
+        "AMP support removed in Next.js 16",
+    );
+    unsupported(
+        "eslint",
+        cfg.removed_keys.iter().any(|k| k == "eslint"),
+        "next lint removed; run oxlint/biome",
+    );
+    unsupported(
+        "sassOptions",
+        cfg.sass_options.is_some(),
+        "Bun has no Sass; precompile or use Lightning CSS",
+    );
+    unsupported(
+        "modularizeImports",
+        !cfg.modularize_imports.is_empty(),
+        "use optimizePackageImports",
+    );
     unsupported(
         "experimental.urlImports",
         cfg.experimental.contains_key("urlImports"),
         "URL imports are not bundled; vendor the modules",
     );
-    unsupported("cacheHandler", cfg.cache_handler.is_some(), "legacy cacheHandler class; use cacheHandlers");
-    unsupported("adapterPath", cfg.adapter_path.is_some(), "deployment adapters are Next-specific");
+    unsupported(
+        "cacheHandler",
+        cfg.cache_handler.is_some(),
+        "legacy cacheHandler class; use cacheHandlers",
+    );
+    unsupported(
+        "adapterPath",
+        cfg.adapter_path.is_some(),
+        "deployment adapters are Next-specific",
+    );
     unsupported(
         "serverRuntimeConfig / publicRuntimeConfig",
-        cfg.removed_keys.iter().any(|k| k == "serverRuntimeConfig" || k == "publicRuntimeConfig"),
+        cfg.removed_keys
+            .iter()
+            .any(|k| k == "serverRuntimeConfig" || k == "publicRuntimeConfig"),
         "use env / NEXT_PUBLIC_ variables",
     );
 }
@@ -2093,14 +2303,26 @@ fn turbopack_features(cfg: &NextConfig, out: &mut Vec<FeatureStatus>) {
                 Support::Partial => format!("Bun plugin for {glob} with caveats"),
                 Support::Unsupported => format!("no Bun plugin for {glob}"),
             };
-            out.push(feature(format!("turbopack.rules {}", loader.loader), support, note));
+            out.push(feature(
+                format!("turbopack.rules {}", loader.loader),
+                support,
+                note,
+            ));
         }
     }
     if !cfg.turbopack.resolve_alias.is_empty() {
-        out.push(feature("turbopack.resolveAlias", Support::Mapped, "Bun onResolve alias plugin"));
+        out.push(feature(
+            "turbopack.resolveAlias",
+            Support::Mapped,
+            "Bun onResolve alias plugin",
+        ));
     }
     if !cfg.turbopack.resolve_extensions.is_empty() {
-        out.push(feature("turbopack.resolveExtensions", Support::Mapped, "Bun resolve order"));
+        out.push(feature(
+            "turbopack.resolveExtensions",
+            Support::Mapped,
+            "Bun resolve order",
+        ));
     }
 }
 
@@ -2196,7 +2418,9 @@ pub fn next_config_to_yolo(
 /// Serializes a [`YoloWebConfig`] as `yolo.toml`.
 pub fn yolo_config_toml(cfg: &YoloWebConfig) -> String {
     match toml::to_string_pretty(cfg) {
-        Ok(body) => format!("# Generated by yolo-next from next.config (Next.js 16 -> Yolo)\n{body}"),
+        Ok(body) => {
+            format!("# Generated by yolo-next from next.config (Next.js 16 -> Yolo)\n{body}")
+        }
         Err(err) => format!("# yolo.toml could not be serialized: {err}\n"),
     }
 }
@@ -2240,15 +2464,12 @@ fn env_markers_to_ts(json: &str) -> String {
             };
             Some((expr, end + 2))
         });
-        match replaced {
-            Some((expr, consumed)) => {
-                out.push_str(&expr);
-                rest = &after[consumed..];
-            }
-            None => {
-                out.push_str(OPEN);
-                rest = after;
-            }
+        if let Some((expr, consumed)) = replaced {
+            out.push_str(&expr);
+            rest = &after[consumed..];
+        } else {
+            out.push_str(OPEN);
+            rest = after;
         }
     }
     out.push_str(rest);
@@ -2396,17 +2617,29 @@ export default nextConfig;
         assert!(cfg.cache_components && cfg.typed_routes);
         assert_eq!(cfg.react_compiler, Some(Value::Bool(true)));
         assert_eq!(cfg.transpile_packages, vec![String::from("@acme/ui")]);
-        assert_eq!(cfg.server_external_packages, vec![String::from("sharp"), String::from("pino")]);
+        assert_eq!(
+            cfg.server_external_packages,
+            vec![String::from("sharp"), String::from("pino")]
+        );
         assert_eq!(cfg.page_extensions, vec!["tsx", "ts", "mdx"]);
-        assert_eq!(cfg.env.get("APP_NAME").map(String::as_str), Some("Yolo Fixture"));
+        assert_eq!(
+            cfg.env.get("APP_NAME").map(String::as_str),
+            Some("Yolo Fixture")
+        );
 
         assert_eq!(cfg.turbopack.root.as_deref(), Some("."));
         assert_eq!(cfg.turbopack.rules.len(), 4);
         let svg = &cfg.turbopack.rules["*.svg"][0];
         assert_eq!(svg.loaders[0].loader, "@svgr/webpack");
         assert_eq!(svg.as_.as_deref(), Some("*.js"));
-        assert_eq!(cfg.turbopack.resolve_alias["underscore"], Value::String(String::from("lodash")));
-        assert_eq!(cfg.turbopack.resolve_alias["mocha"]["browser"], "mocha/browser-entry.js");
+        assert_eq!(
+            cfg.turbopack.resolve_alias["underscore"],
+            Value::String(String::from("lodash"))
+        );
+        assert_eq!(
+            cfg.turbopack.resolve_alias["mocha"]["browser"],
+            "mocha/browser-entry.js"
+        );
         assert_eq!(cfg.turbopack.resolve_extensions.len(), 7);
 
         assert_eq!(cfg.images.formats, vec!["image/avif", "image/webp"]);
@@ -2415,7 +2648,12 @@ export default nextConfig;
         assert_eq!(cfg.images.remote_patterns.len(), 3);
         assert_eq!(cfg.images.remote_patterns[1].hostname, "**.cloudfront.net");
         assert_eq!(cfg.images.remote_patterns[2].port.as_deref(), Some(""));
-        assert_eq!(cfg.images.local_patterns.as_ref().unwrap()[0].pathname.as_deref(), Some("/assets/images/**"));
+        assert_eq!(
+            cfg.images.local_patterns.as_ref().unwrap()[0]
+                .pathname
+                .as_deref(),
+            Some("/assets/images/**")
+        );
 
         assert_eq!(cfg.redirects.len(), 3);
         assert_eq!(cfg.redirects[0].permanent, Some(true));
@@ -2428,16 +2666,33 @@ export default nextConfig;
         assert_eq!(cfg.headers.len(), 2);
         assert_eq!(cfg.headers[0].headers[1].key, "Strict-Transport-Security");
 
-        assert_eq!(cfg.compiler.define.get("__BUILD_FLAG__").map(String::as_str), Some("true"));
-        assert_eq!(cfg.compiler.remove_console.as_ref().unwrap()["exclude"][0], "error");
+        assert_eq!(
+            cfg.compiler
+                .define
+                .get("__BUILD_FLAG__")
+                .map(String::as_str),
+            Some("true")
+        );
+        assert_eq!(
+            cfg.compiler.remove_console.as_ref().unwrap()["exclude"][0],
+            "error"
+        );
         assert_eq!(cfg.cache_life["blog"].revalidate, Some(900));
         assert_eq!(cfg.experimental["serverActions"]["bodySizeLimit"], "2mb");
         assert!(cfg.experimental.contains_key("staleTimes"));
         assert_eq!(cfg.removed_keys, vec![String::from("eslint")]);
         assert!(cfg.logging.is_some());
-        assert!(cfg.wrappers.is_empty());
-        assert!(diagnostics.iter().any(|d| d.code == "next-config-removed-key" && d.message.contains("eslint")));
-        assert!(diagnostics.iter().all(|d| d.file.as_deref() == Some("next.config.ts")));
+        assert_eq!(cfg.wrappers, Vec::<String>::new());
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.code == "next-config-removed-key" && d.message.contains("eslint"))
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .all(|d| d.file.as_deref() == Some("next.config.ts"))
+        );
         assert!(!diagnostics.iter().any(|d| d.severity == Severity::Error));
     }
 
@@ -2446,10 +2701,18 @@ export default nextConfig;
         let (cfg, _) = parse(&fixture_source(), "next.config.ts");
         let (yolo, report) = next_config_to_yolo(&cfg, "app", Some("pages"), Some("proxy.ts"));
         assert_eq!(yolo.server.action_body_size_limit, 2_097_152);
-        assert_eq!(yolo.server.action_allowed_origins, vec![String::from("app.example.com")]);
+        assert_eq!(
+            yolo.server.action_allowed_origins,
+            vec![String::from("app.example.com")]
+        );
         assert!(!yolo.server.powered_by_header);
         assert!(yolo.server.compress);
-        assert!(yolo.react.strict_mode && yolo.react.compiler && yolo.react.cache_components && yolo.react.typed_routes);
+        assert!(
+            yolo.react.strict_mode
+                && yolo.react.compiler
+                && yolo.react.cache_components
+                && yolo.react.typed_routes
+        );
         assert_eq!(yolo.output, OutputMode::Standalone);
         assert_eq!(yolo.dist_dir, ".yolo");
         assert_eq!(yolo.app_dir, "app");
@@ -2462,21 +2725,60 @@ export default nextConfig;
         assert_eq!(yolo.bundler.plugins.len(), 5, "alias plugin + 4 rules");
         assert_eq!(yolo.redirects.len(), 3);
         assert_eq!(yolo.public_env_prefixes[0], "NEXT_PUBLIC_");
-        assert!(report.features.iter().any(|f| f.feature == "output: standalone" && f.support == Support::Mapped));
-        assert!(report.features.iter().any(|f| f.feature == "reactCompiler" && f.support == Support::Partial));
-        assert!(report.features.iter().any(|f| f.feature == "eslint" && f.support == Support::Unsupported));
-        assert!(report.features.iter().any(|f| f.feature == "turbopack.rules @svgr/webpack" && f.support == Support::Mapped));
-        assert!(report.features.iter().any(|f| f.feature == "turbopack.rules graphql-tag/loader" && f.support == Support::Partial));
+        assert!(
+            report
+                .features
+                .iter()
+                .any(|f| f.feature == "output: standalone" && f.support == Support::Mapped)
+        );
+        assert!(
+            report
+                .features
+                .iter()
+                .any(|f| f.feature == "reactCompiler" && f.support == Support::Partial)
+        );
+        assert!(
+            report
+                .features
+                .iter()
+                .any(|f| f.feature == "eslint" && f.support == Support::Unsupported)
+        );
+        assert!(
+            report
+                .features
+                .iter()
+                .any(|f| f.feature == "turbopack.rules @svgr/webpack"
+                    && f.support == Support::Mapped)
+        );
+        assert!(
+            report
+                .features
+                .iter()
+                .any(|f| f.feature == "turbopack.rules graphql-tag/loader"
+                    && f.support == Support::Partial)
+        );
 
         let toml_text = yolo_config_toml(&yolo);
-        assert!(toml_text.starts_with("# Generated by yolo-next"), "{toml_text}");
-        assert!(toml_text.contains("actionBodySizeLimit = 2097152"), "{toml_text}");
+        assert!(
+            toml_text.starts_with("# Generated by yolo-next"),
+            "{toml_text}"
+        );
+        assert!(
+            toml_text.contains("actionBodySizeLimit = 2097152"),
+            "{toml_text}"
+        );
         assert!(toml_text.contains("[cdn]"));
         let ts = yolo_config_ts(&yolo);
         assert!(ts.starts_with("// Generated by yolo-next\nimport { defineYoloConfig } from \"@yolo-rs/next\";\n\nexport default defineYoloConfig({"));
         assert!(ts.ends_with("} as const);\n"));
-        assert!(ts.contains("\"assetPrefix\": process.env.CDN_URL ?? \"\""), "{ts}");
-        assert!(ts.contains("\"deploymentId\": process.env.DEPLOYMENT_ID"), "{ts}");
+        assert!(
+            ts.contains("\"assetPrefix\": process.env.CDN_URL ?? \"\""),
+            "{ts}"
+        );
+        assert!(
+            ts.contains("\"deploymentId\": process.env.DEPLOYMENT_ID"),
+            "{ts}"
+        );
         assert!(!ts.contains("${env:"));
     }
 
@@ -2498,7 +2800,13 @@ const nextConfig = {
 module.exports = withBundleAnalyzer(withSentryConfig(nextConfig, { silent: true }));
 "#;
         let (cfg, diagnostics) = parse(source, "next.config.js");
-        assert_eq!(cfg.wrappers, vec![String::from("withBundleAnalyzer"), String::from("withSentryConfig")]);
+        assert_eq!(
+            cfg.wrappers,
+            vec![
+                String::from("withBundleAnalyzer"),
+                String::from("withSentryConfig")
+            ]
+        );
         assert_eq!(cfg.react_strict_mode, Some(false));
         assert_eq!(cfg.images.remote_patterns.len(), 2);
         assert_eq!(cfg.images.remote_patterns[0].hostname, "a.com");
@@ -2509,19 +2817,42 @@ module.exports = withBundleAnalyzer(withSentryConfig(nextConfig, { silent: true 
         assert!(cfg.skip_proxy_url_normalize);
         assert!(cfg.webpack_present);
         assert!(cfg.experimental.is_empty());
-        assert!(cfg.removed_keys.contains(&String::from("publicRuntimeConfig")));
-        assert!(cfg.removed_keys.contains(&String::from("experimental.appDir")));
+        assert!(
+            cfg.removed_keys
+                .contains(&String::from("publicRuntimeConfig"))
+        );
+        assert!(
+            cfg.removed_keys
+                .contains(&String::from("experimental.appDir"))
+        );
         assert_eq!(cfg.extra["unknownThing"], 42);
-        let renamed: Vec<&str> = cfg.renamed_keys.iter().map(|(from, _)| from.as_str()).collect();
+        let renamed: Vec<&str> = cfg
+            .renamed_keys
+            .iter()
+            .map(|(from, _)| from.as_str())
+            .collect();
         assert!(renamed.contains(&"experimental.turbo"));
         assert!(renamed.contains(&"experimental.serverComponentsExternalPackages"));
         assert!(renamed.contains(&"experimental.ppr"));
         assert!(renamed.contains(&"skipMiddlewareUrlNormalize"));
         assert!(renamed.contains(&"images.domains"));
         assert!(diagnostics.iter().any(|d| d.code == "next-config-wrapper"));
-        assert!(diagnostics.iter().any(|d| d.code == "next-config-webpack-unsupported" && d.severity == Severity::Error));
-        assert!(diagnostics.iter().any(|d| d.code == "next-config-images-domains-deprecated"));
-        assert!(diagnostics.iter().any(|d| d.code == "next-config-unknown-key"));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.code == "next-config-webpack-unsupported"
+                    && d.severity == Severity::Error)
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.code == "next-config-images-domains-deprecated")
+        );
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.code == "next-config-unknown-key")
+        );
     }
 
     #[test]
@@ -2548,16 +2879,29 @@ export default async (phase, { defaultConfig }) => {
         assert_eq!(cfg.dist_dir.as_deref(), Some("build"));
         assert_eq!(cfg.base_path, "/app");
         assert!(cfg.redirects_dynamic);
-        assert!(cfg.redirects.is_empty());
+        assert_eq!(cfg.redirects, Vec::<RouteRule>::new());
         assert!(!cfg.rewrites_dynamic);
         assert_eq!(cfg.rewrites.after_files.len(), 1);
         assert_eq!(cfg.headers.len(), 1);
         assert!(cfg.generate_build_id_present);
         assert!(cfg.export_path_map_present);
-        assert!(diagnostics.iter().any(|d| d.code == "next-config-phase-function"));
-        let dynamic = diagnostics.iter().find(|d| d.code == "next-config-dynamic-redirects").unwrap();
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.code == "next-config-phase-function")
+        );
+        let dynamic = diagnostics
+            .iter()
+            .find(|d| d.code == "next-config-dynamic-redirects")
+            .unwrap();
         assert_eq!(dynamic.severity, Severity::Warning);
-        assert!(dynamic.hint.as_deref().unwrap().contains("awaited at startup"));
+        assert!(
+            dynamic
+                .hint
+                .as_deref()
+                .unwrap()
+                .contains("awaited at startup")
+        );
     }
 
     #[test]
@@ -2572,7 +2916,7 @@ export default defineConfig({
 } satisfies import("next").NextConfig);
 "#;
         let (cfg, _) = parse(source, "next.config.ts");
-        assert!(cfg.wrappers.is_empty());
+        assert_eq!(cfg.wrappers, Vec::<String>::new());
         assert_eq!(cfg.output.as_deref(), Some("export"));
         assert!(cfg.trailing_slash);
         assert_eq!(cfg.expire_time, Some(3600));
@@ -2620,7 +2964,10 @@ export default defineConfig({
         assert!(value.get("v").is_none());
         assert_eq!(value["w"]["nested"]["deep"][0], true);
         assert!(value["w"].get("computed").is_none());
-        assert_eq!(value["x"], 1, "literal arrow bodies evaluate to their value");
+        assert_eq!(
+            value["x"], 1,
+            "literal arrow bodies evaluate to their value"
+        );
         assert_eq!(value["fn"], FUNCTION_MARKER);
         assert_eq!(value["y"], 5);
         assert_eq!(value["z"], "ab");
@@ -2641,7 +2988,12 @@ export { nextConfig as default };
         assert_eq!(cfg.compress, Some(false));
         assert_eq!(cfg.powered_by_header, Some(false));
         assert_eq!(cfg.page_extensions, vec!["ts", "tsx"]);
-        assert!(diagnostics.iter().any(|d| d.code == "next-config-spread-unsupported" && d.severity == Severity::Warning));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.code == "next-config-spread-unsupported"
+                    && d.severity == Severity::Warning)
+        );
     }
 
     #[test]
@@ -2649,7 +3001,8 @@ export { nextConfig as default };
         assert!(parse_next_config("export default {", "next.config.ts").is_err());
         let err = parse_next_config("const a = 1;", "next.config.ts").unwrap_err();
         assert_eq!(err[0].code, "next-config-no-export");
-        let err = parse_next_config("export default someFunctionCall();", "next.config.ts").unwrap_err();
+        let err =
+            parse_next_config("export default someFunctionCall();", "next.config.ts").unwrap_err();
         assert!(err.iter().any(|d| d.code == "next-config-unresolvable"));
     }
 
@@ -2666,16 +3019,29 @@ export { nextConfig as default };
         let (cfg, diagnostics) = next_config_from_value(&value);
         assert!(cfg.redirects_dynamic);
         assert_eq!(cfg.rewrites.after_files.len(), 1);
-        assert_eq!(cfg.dev_indicators.as_ref().unwrap()["position"], "bottom-right");
-        assert!(cfg.removed_keys.contains(&String::from("devIndicators.buildActivity")));
-        assert!(cfg.removed_keys.contains(&String::from("experimental.serverActions")));
+        assert_eq!(
+            cfg.dev_indicators.as_ref().unwrap()["position"],
+            "bottom-right"
+        );
+        assert!(
+            cfg.removed_keys
+                .contains(&String::from("devIndicators.buildActivity"))
+        );
+        assert!(
+            cfg.removed_keys
+                .contains(&String::from("experimental.serverActions"))
+        );
         assert!(cfg.removed_keys.contains(&String::from("amp")));
         assert!(cfg.cache_components);
         assert_eq!(cfg.experimental["esmExternals"], "loose");
         let i18n = cfg.i18n.unwrap();
         assert_eq!(i18n.locales, vec!["en", "fr"]);
         assert_eq!(i18n.locale_detection, Some(false));
-        assert!(diagnostics.iter().any(|d| d.code == "next-config-i18n-app-router"));
+        assert!(
+            diagnostics
+                .iter()
+                .any(|d| d.code == "next-config-i18n-app-router")
+        );
         assert_eq!(cfg.page_extensions, DEFAULT_PAGE_EXTENSIONS);
     }
 
@@ -2686,10 +3052,22 @@ export { nextConfig as default };
         assert_eq!(builtin["seconds"].revalidate, Some(1));
         assert_eq!(builtin["max"].expire, Some(31_536_000));
         let mut cfg = NextConfig::default();
-        cfg.cache_life.insert(String::from("short"), CacheLifeProfile { stale: None, revalidate: Some(10), expire: Some(5) });
+        cfg.cache_life.insert(
+            String::from("short"),
+            CacheLifeProfile { stale: None, revalidate: Some(10), expire: Some(5) },
+        );
         let (yolo, report) = next_config_to_yolo(&cfg, "app", None, None);
-        assert_eq!(yolo.cache_life["short"].stale, Some(300), "inherits stale from default");
-        assert!(report.diagnostics.iter().any(|d| d.code == "next-config-cache-life-invalid"));
+        assert_eq!(
+            yolo.cache_life["short"].stale,
+            Some(300),
+            "inherits stale from default"
+        );
+        assert!(
+            report
+                .diagnostics
+                .iter()
+                .any(|d| d.code == "next-config-cache-life-invalid")
+        );
         assert_eq!(yolo.server.action_body_size_limit, 1_048_576);
         assert!(yolo.react.strict_mode, "strict mode defaults on");
     }
@@ -2704,7 +3082,9 @@ export { nextConfig as default };
         assert_eq!(parse_byte_size(&Value::from("12 b")), Some(12));
         assert_eq!(parse_byte_size(&Value::from("nope")), None);
         assert_eq!(
-            env_markers_to_ts(r#"{"a": "${env:X}", "b": "${env:Y|dflt}", "c": "${env:not valid}", "d": "${env:MY-KEY}"}"#),
+            env_markers_to_ts(
+                r#"{"a": "${env:X}", "b": "${env:Y|dflt}", "c": "${env:not valid}", "d": "${env:MY-KEY}"}"#
+            ),
             r#"{"a": process.env.X, "b": process.env.Y ?? "dflt", "c": "${env:not valid}", "d": process.env["MY-KEY"]}"#
         );
     }
@@ -2716,9 +3096,15 @@ export { nextConfig as default };
         assert!(find_next_config(&dir).is_none());
         std::fs::write(dir.join("next.config.js"), "module.exports = {}").unwrap();
         std::fs::write(dir.join("next.config.mjs"), "export default {}").unwrap();
-        assert_eq!(find_next_config(&dir).unwrap().file_name().unwrap(), "next.config.mjs");
+        assert_eq!(
+            find_next_config(&dir).unwrap().file_name().unwrap(),
+            "next.config.mjs"
+        );
         std::fs::write(dir.join("next.config.ts"), "export default {}").unwrap();
-        assert_eq!(find_next_config(&dir).unwrap().file_name().unwrap(), "next.config.ts");
+        assert_eq!(
+            find_next_config(&dir).unwrap().file_name().unwrap(),
+            "next.config.ts"
+        );
         std::fs::remove_dir_all(&dir).unwrap();
     }
 }

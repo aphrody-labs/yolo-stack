@@ -128,7 +128,8 @@ let inlineCounter = 0;
 export const INLINE_CLIENT_PREFIX = "yolo-inline:";
 
 /** Registers a component as a client reference resolvable in-process (`yolo-inline:<n>#default`). */
-export function registerInlineClientComponent(component: ComponentLike, name?: string): ClientReferenceLike {
+export function registerInlineClientComponent<P extends object>(input: (props: P) => unknown, name?: string): ClientReferenceLike {
+  const component = input as unknown as ComponentLike;
   const existing = inlineClientByFn.get(component);
   if (existing) {
     return existing;

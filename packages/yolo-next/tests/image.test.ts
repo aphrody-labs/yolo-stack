@@ -356,7 +356,7 @@ describe("optimizer handler", () => {
     expect(first.headers.get("cache-control")).toBe("public, max-age=86400, must-revalidate");
     expect(first.headers.get("content-security-policy")).toBe(policy.contentSecurityPolicy);
     expect(first.headers.get("content-disposition")).toMatch(/^attachment; filename="photo\.(webp|png)"$/);
-    expect(["image/webp", "image/png"]).toContain(first.headers.get("content-type"));
+    expect(["image/webp", "image/png"]).toContain(first.headers.get("content-type") ?? "");
     expect(first.headers.get("x-nextjs-cache")).toBe("MISS");
     const etag = first.headers.get("etag");
     expect(etag).toMatch(/^"[0-9a-f]{32}"$/);

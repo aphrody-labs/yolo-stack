@@ -6,6 +6,7 @@
 //! score weighs mapped features as 1, partial as 0.5 and unsupported as 0.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::types::{
@@ -43,7 +44,10 @@ fn collect_conventions(segment: &RouteSegment, out: &mut BTreeSet<&'static str>)
         ("template", files.template.is_some()),
         ("default", files.default.is_some()),
         ("route", files.route.is_some()),
-        ("forbidden", files.forbidden.is_some() || files.unauthorized.is_some()),
+        (
+            "forbidden",
+            files.forbidden.is_some() || files.unauthorized.is_some(),
+        ),
         ("metadata", !files.metadata.is_empty()),
     ];
     for (name, is_present) in present {
@@ -106,28 +110,58 @@ fn route_features(analysis: &ProjectAnalysis, matrix: &mut Matrix) {
         conventions.insert("global-error");
     }
     let entries = &routes.entries;
-    if entries.iter().any(|e| e.kind == RouteKind::Page && !e.legacy_pages) {
+    if entries
+        .iter()
+        .any(|e| e.kind == RouteKind::Page && !e.legacy_pages)
+    {
         conventions.insert("page");
     }
-    if entries.iter().any(|e| e.kind == RouteKind::RouteHandler && !e.legacy_pages) {
+    if entries
+        .iter()
+        .any(|e| e.kind == RouteKind::RouteHandler && !e.legacy_pages)
+    {
         conventions.insert("route");
     }
     let has = |name: &str| conventions.contains(name);
-    matrix.mapped("app/layout.tsx", has("layout"), "nested layouts -> router outlet chain");
+    matrix.mapped(
+        "app/layout.tsx",
+        has("layout"),
+        "nested layouts -> router outlet chain",
+    );
     matrix.mapped("app/page.tsx", has("page"), "route component");
-    matrix.mapped("app/loading.tsx", has("loading"), "Suspense fallback / pending component");
+    matrix.mapped(
+        "app/loading.tsx",
+        has("loading"),
+        "Suspense fallback / pending component",
+    );
     matrix.mapped("app/error.tsx", has("error"), "error boundary");
     matrix.mapped("app/not-found.tsx", has("not-found"), "404 boundary");
-    matrix.mapped("app/global-error.tsx", has("global-error"), "root error boundary");
+    matrix.mapped(
+        "app/global-error.tsx",
+        has("global-error"),
+        "root error boundary",
+    );
     matrix.mapped("app/template.tsx", has("template"), "remounting layout");
     matrix.mapped("app/default.tsx", has("default"), "parallel slot fallback");
-    matrix.mapped("route handlers", has("route"), "GET/POST/... exports -> Bun.serve routes");
-    matrix.partial("forbidden / unauthorized", has("forbidden"), "403/401 boundaries (authInterrupts)");
+    matrix.mapped(
+        "route handlers",
+        has("route"),
+        "GET/POST/... exports -> Bun.serve routes",
+    );
+    matrix.partial(
+        "forbidden / unauthorized",
+        has("forbidden"),
+        "403/401 boundaries (authInterrupts)",
+    );
 
     let parallel = entries
         .iter()
         .any(|e| e.slot.is_some() || !e.parallel_slots.is_empty());
-    matrix.mapped("parallel routes (@slot)", parallel, "slots rendered as layout props");
+    matrix.mapped(
+        "parallel routes (@slot)",
+        parallel,
+        "slots rendered as layout props",
+    );
     if entries.iter().any(|e| e.intercepting.is_some()) {
         matrix.push(
             "intercepting routes",
@@ -150,19 +184,31 @@ fn route_features(analysis: &ProjectAnalysis, matrix: &mut Matrix) {
     }
     matrix.mapped(
         "generateStaticParams",
-        entries.iter().any(|e| e.segment_config.has_generate_static_params),
+        entries
+            .iter()
+            .any(|e| e.segment_config.has_generate_static_params),
         "prerender list at build time",
     );
     matrix.mapped(
         "generateMetadata",
-        entries.iter().any(|e| e.segment_config.has_generate_metadata),
+        entries
+            .iter()
+            .any(|e| e.segment_config.has_generate_metadata),
         "async head tags",
     );
     let metadata_files = has("metadata")
         || !routes.static_metadata.is_empty()
         || entries.iter().any(|e| e.kind == RouteKind::Metadata);
-    matrix.mapped("metadata files", metadata_files, "icon/opengraph/sitemap/robots/manifest routes");
-    matrix.partial("proxy.ts", analysis.proxy.is_some(), "wrapped for Bun.serve; Node runtime semantics");
+    matrix.mapped(
+        "metadata files",
+        metadata_files,
+        "icon/opengraph/sitemap/robots/manifest routes",
+    );
+    matrix.partial(
+        "proxy.ts",
+        analysis.proxy.is_some(),
+        "wrapped for Bun.serve; Node runtime semantics",
+    );
     matrix.partial(
         "instrumentation",
         routes.instrumentation.is_some() || routes.instrumentation_client.is_some(),
@@ -184,7 +230,11 @@ fn asset_features(analysis: &ProjectAnalysis, matrix: &mut Matrix) {
         .fonts
         .iter()
         .any(|f| matches!(f.source, FontSource::Local { .. }));
-    matrix.mapped("next/font/google", google, "self-hosted CSS2 fetch + size-adjust fallback");
+    matrix.mapped(
+        "next/font/google",
+        google,
+        "self-hosted CSS2 fetch + size-adjust fallback",
+    );
     matrix.mapped("next/font/local", local, "@font-face + fallback metrics");
     matrix.mapped(
         "next/image",
@@ -209,11 +259,31 @@ fn rsc_features(analysis: &ProjectAnalysis, matrix: &mut Matrix) {
         .iter()
         .flat_map(|m| m.cache_functions.iter())
         .any(|c| c.variant == "remote");
-    matrix.mapped("\"use client\"", client, "client reference manifest + hydration boundary");
-    matrix.mapped("\"use server\"", server_actions, "Server Actions RPC (Next-Action id)");
-    matrix.mapped("inline server actions", inline, "hoisted and registered by id");
-    matrix.partial("\"use cache\"", cache, "in-memory + bun:sqlite cache handler");
-    matrix.partial("\"use cache: remote\"", remote_cache, "remote handler stubbed to the sqlite handler");
+    matrix.mapped(
+        "\"use client\"",
+        client,
+        "client reference manifest + hydration boundary",
+    );
+    matrix.mapped(
+        "\"use server\"",
+        server_actions,
+        "Server Actions RPC (Next-Action id)",
+    );
+    matrix.mapped(
+        "inline server actions",
+        inline,
+        "hoisted and registered by id",
+    );
+    matrix.partial(
+        "\"use cache\"",
+        cache,
+        "in-memory + bun:sqlite cache handler",
+    );
+    matrix.partial(
+        "\"use cache: remote\"",
+        remote_cache,
+        "remote handler stubbed to the sqlite handler",
+    );
     matrix.partial(
         "cacheComponents / PPR",
         analysis.config.cache_components,
@@ -223,11 +293,14 @@ fn rsc_features(analysis: &ProjectAnalysis, matrix: &mut Matrix) {
 
 /// Builds the feature matrix from an analysis.
 pub fn feature_matrix(analysis: &ProjectAnalysis) -> Vec<FeatureStatus> {
-    let mut matrix = Matrix {
-        features: Vec::new(),
-    };
+    let mut matrix = Matrix { features: Vec::new() };
     for feature in &analysis.config_report.features {
-        matrix.push(&feature.feature, feature.support, &feature.note, feature.target);
+        matrix.push(
+            &feature.feature,
+            feature.support,
+            &feature.note,
+            feature.target,
+        );
     }
     route_features(analysis, &mut matrix);
     asset_features(analysis, &mut matrix);
@@ -241,7 +314,7 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
     let era = if z >= 0 { z } else { z - 146_096 } / 146_097;
     let doe = (z - era * 146_097) as u64;
     let yoe = (doe - doe / 1460 + doe / 36_524 - doe / 146_096) / 365;
-    let year = yoe as i64 + era * 400;
+    let year = i64::try_from(yoe).unwrap_or(i64::MAX) + era * 400;
     let doy = doe - (365 * yoe + yoe / 4 - yoe / 100);
     let mp = (5 * doy + 2) / 153;
     let day = (doy - (153 * mp + 2) / 5 + 1) as u32;
@@ -251,7 +324,7 @@ fn civil_from_days(days: i64) -> (i64, u32, u32) {
 
 /// ISO-8601 UTC timestamp (`2026-11-05T12:34:56Z`) for seconds since the Unix epoch.
 fn iso8601_utc(secs: u64) -> String {
-    let days = (secs / 86_400) as i64;
+    let days = i64::try_from(secs / 86_400).unwrap_or(i64::MAX);
     let rem = secs % 86_400;
     let (year, month, day) = civil_from_days(days);
     format!(
@@ -282,8 +355,14 @@ pub fn build_report(
     let mut counts = BTreeMap::new();
     counts.insert(String::from("routes"), entries.len() as u64);
     counts.insert(String::from("pages"), count_kind(RouteKind::Page));
-    counts.insert(String::from("route_handlers"), count_kind(RouteKind::RouteHandler));
-    counts.insert(String::from("metadata_routes"), count_kind(RouteKind::Metadata));
+    counts.insert(
+        String::from("route_handlers"),
+        count_kind(RouteKind::RouteHandler),
+    );
+    counts.insert(
+        String::from("metadata_routes"),
+        count_kind(RouteKind::Metadata),
+    );
     counts.insert(
         String::from("client_components"),
         analysis
@@ -343,26 +422,28 @@ fn support_label(support: Support) -> &'static str {
 /// Renders the report as Markdown.
 pub fn report_markdown(report: &MigrationReport) -> String {
     let mut out = String::new();
-    out.push_str(&format!("# Migration report: {}\n\n", report.project));
-    out.push_str(&format!(
+    _ = write!(out, "# Migration report: {}\n\n", report.project);
+    _ = write!(
+        out,
         "Generated {} by yolo-next (Next.js {} baseline, Bun {}).\n\n",
         report.generated_at,
         crate::NEXT_VERSION_BASELINE,
         crate::BUN_VERSION_BASELINE
-    ));
+    );
     out.push_str("## Summary\n\n| Metric | Value |\n|---|---|\n");
-    out.push_str(&format!("| Parity score | {}% |\n", report.parity_score));
+    _ = writeln!(out, "| Parity score | {}% |", report.parity_score);
     let targets: Vec<&str> = report.targets.iter().map(|t| t.id()).collect();
-    out.push_str(&format!(
-        "| Targets | {} |\n",
+    _ = writeln!(
+        out,
+        "| Targets | {} |",
         if targets.is_empty() {
             String::from("-")
         } else {
             targets.join(", ")
         }
-    ));
+    );
     for (name, value) in &report.counts {
-        out.push_str(&format!("| {} | {value} |\n", name.replace('_', " ")));
+        _ = writeln!(out, "| {} | {value} |", name.replace('_', " "));
     }
     let errors = report
         .diagnostics
@@ -374,21 +455,27 @@ pub fn report_markdown(report: &MigrationReport) -> String {
         .iter()
         .filter(|d| d.severity == Severity::Warning)
         .count();
-    out.push_str(&format!(
-        "| Diagnostics | {} ({errors} errors, {warnings} warnings) |\n",
+    _ = writeln!(
+        out,
+        "| Diagnostics | {} ({errors} errors, {warnings} warnings) |",
         report.diagnostics.len()
-    ));
-    out.push_str(&format!("| Emitted files | {} |\n\n", report.files_emitted.len()));
+    );
+    _ = write!(
+        out,
+        "| Emitted files | {} |\n\n",
+        report.files_emitted.len()
+    );
 
     out.push_str("## Features\n\n| Feature | Support | Note | Target |\n|---|---|---|---|\n");
     for feature in &report.features {
-        out.push_str(&format!(
-            "| {} | {} | {} | {} |\n",
+        _ = writeln!(
+            out,
+            "| {} | {} | {} | {} |",
             cell(&feature.feature),
             support_label(feature.support),
             cell(&feature.note),
             feature.target.map_or("all", Target::id)
-        ));
+        );
     }
     if report.features.is_empty() {
         out.push_str("| (none) | - | - | - |\n");
@@ -400,16 +487,16 @@ pub fn report_markdown(report: &MigrationReport) -> String {
         (Severity::Warning, "Warnings"),
         (Severity::Info, "Info"),
     ] {
-        out.push_str(&format!("\n### {title}\n\n"));
+        _ = write!(out, "\n### {title}\n\n");
         let mut any = false;
         for diagnostic in report.diagnostics.iter().filter(|d| d.severity == severity) {
             any = true;
-            out.push_str(&format!("- `{}` {}", diagnostic.code, diagnostic.message));
+            _ = write!(out, "- `{}` {}", diagnostic.code, diagnostic.message);
             if let Some(file) = &diagnostic.file {
-                out.push_str(&format!(" ({file})"));
+                _ = write!(out, " ({file})");
             }
             if let Some(hint) = &diagnostic.hint {
-                out.push_str(&format!(" -- {hint}"));
+                _ = write!(out, " -- {hint}");
             }
             out.push('\n');
         }
@@ -420,7 +507,7 @@ pub fn report_markdown(report: &MigrationReport) -> String {
 
     out.push_str("\n## Emitted files\n\n");
     for path in &report.files_emitted {
-        out.push_str(&format!("- `{path}`\n"));
+        _ = writeln!(out, "- `{path}`");
     }
     if report.files_emitted.is_empty() {
         out.push_str("- none\n");
@@ -434,8 +521,8 @@ mod tests {
     use super::*;
     use crate::types::{
         CacheFunction, CdnPlan, ConfigMigrationReport, Diagnostic, FontRequest, ImageUsageReport,
-        InterceptSpec, ModuleGraph, ModuleInfo, NextConfig, ProxySpec, RouteEntry,
-        RouteManifest, SegmentConfig, SegmentFiles, SegmentKind, YoloWebConfig,
+        InterceptSpec, ModuleGraph, ModuleInfo, NextConfig, ProxySpec, RouteEntry, RouteManifest,
+        SegmentConfig, SegmentFiles, SegmentKind, YoloWebConfig,
     };
 
     fn feature(support: Support) -> FeatureStatus {
@@ -475,6 +562,7 @@ mod tests {
         }
     }
 
+    #[allow(clippy::too_many_lines, reason = "test fixture literal")]
     fn analysis() -> ProjectAnalysis {
         let tree = RouteSegment {
             name: String::from("app"),
@@ -505,10 +593,7 @@ mod tests {
         page.segment_config.has_generate_metadata = true;
         let mut modal = entry(RouteKind::Page, "app/@modal/(.)photo/page.tsx");
         modal.slot = Some(String::from("modal"));
-        modal.intercepting = Some(InterceptSpec {
-            level: 0,
-            target: String::from("/photo"),
-        });
+        modal.intercepting = Some(InterceptSpec { level: 0, target: String::from("/photo") });
         let config_report = ConfigMigrationReport {
             features: vec![FeatureStatus {
                 feature: String::from("output"),
@@ -523,15 +608,16 @@ mod tests {
             name: String::from("demo"),
             next_version: Some(String::from("16.4.5")),
             config_file: Some(String::from("next.config.ts")),
-            config: NextConfig {
-                cache_components: true,
-                ..NextConfig::default()
-            },
+            config: NextConfig { cache_components: true, ..NextConfig::default() },
             yolo_config: YoloWebConfig::default(),
             config_report,
             routes: RouteManifest {
                 tree: Some(tree),
-                entries: vec![page, entry(RouteKind::RouteHandler, "app/api/route.ts"), modal],
+                entries: vec![
+                    page,
+                    entry(RouteKind::RouteHandler, "app/api/route.ts"),
+                    modal,
+                ],
                 proxy_file: Some(String::from("proxy.ts")),
                 instrumentation: Some(String::from("instrumentation.ts")),
                 ..RouteManifest::default()
@@ -539,9 +625,7 @@ mod tests {
             fonts: vec![FontRequest {
                 binding: String::from("inter"),
                 import_name: String::from("Inter"),
-                source: FontSource::Google {
-                    family: String::from("Inter"),
-                },
+                source: FontSource::Google { family: String::from("Inter") },
                 subsets: vec![String::from("latin")],
                 weights: Vec::new(),
                 styles: Vec::new(),
@@ -591,11 +675,19 @@ mod tests {
     fn parity_math() {
         assert_eq!(parity_score(&[]), 100);
         assert_eq!(
-            parity_score(&[feature(Support::Mapped), feature(Support::Partial), feature(Support::Unsupported)]),
+            parity_score(&[
+                feature(Support::Mapped),
+                feature(Support::Partial),
+                feature(Support::Unsupported)
+            ]),
             50
         );
         assert_eq!(
-            parity_score(&[feature(Support::Mapped), feature(Support::Mapped), feature(Support::Partial)]),
+            parity_score(&[
+                feature(Support::Mapped),
+                feature(Support::Mapped),
+                feature(Support::Partial)
+            ]),
             83
         );
         assert_eq!(parity_score(&[feature(Support::Unsupported)]), 0);
@@ -613,11 +705,25 @@ mod tests {
         assert_eq!(find("route handlers").unwrap().support, Support::Mapped);
         assert_eq!(find("generateMetadata").unwrap().support, Support::Mapped);
         assert!(find("generateStaticParams").is_none());
-        assert_eq!(find("parallel routes (@slot)").unwrap().support, Support::Mapped);
-        let intercepting: Vec<&FeatureStatus> = features.iter().filter(|f| f.feature == "intercepting routes").collect();
+        assert_eq!(
+            find("parallel routes (@slot)").unwrap().support,
+            Support::Mapped
+        );
+        let intercepting: Vec<&FeatureStatus> = features
+            .iter()
+            .filter(|f| f.feature == "intercepting routes")
+            .collect();
         assert_eq!(intercepting.len(), 3);
-        assert!(intercepting.iter().any(|f| f.target == Some(Target::Dioxus) && f.support == Support::Partial));
-        assert!(intercepting.iter().any(|f| f.target == Some(Target::Bun) && f.support == Support::Mapped));
+        assert!(
+            intercepting
+                .iter()
+                .any(|f| f.target == Some(Target::Dioxus) && f.support == Support::Partial)
+        );
+        assert!(
+            intercepting
+                .iter()
+                .any(|f| f.target == Some(Target::Bun) && f.support == Support::Mapped)
+        );
         assert_eq!(find("proxy.ts").unwrap().support, Support::Partial);
         assert_eq!(find("instrumentation").unwrap().support, Support::Partial);
         assert!(find("pages router").is_none());
@@ -627,17 +733,21 @@ mod tests {
         assert_eq!(find("\"use client\"").unwrap().support, Support::Mapped);
         assert!(find("\"use server\"").is_none());
         assert_eq!(find("\"use cache\"").unwrap().support, Support::Partial);
-        assert_eq!(find("\"use cache: remote\"").unwrap().support, Support::Partial);
-        assert_eq!(find("cacheComponents / PPR").unwrap().support, Support::Partial);
+        assert_eq!(
+            find("\"use cache: remote\"").unwrap().support,
+            Support::Partial
+        );
+        assert_eq!(
+            find("cacheComponents / PPR").unwrap().support,
+            Support::Partial
+        );
     }
 
     #[test]
     fn report_counts_and_markdown() {
         let a = analysis();
-        let files = vec![EmittedFile {
-            path: String::from("src/router.tsx"),
-            contents: String::new(),
-        }];
+        let files =
+            vec![EmittedFile { path: String::from("src/router.tsx"), contents: String::new() }];
         let report = build_report(&a, &[Target::Bun, Target::Leptos], &files);
         assert_eq!(report.project, "demo");
         assert_eq!(report.counts["routes"], 3);
@@ -651,7 +761,11 @@ mod tests {
         assert_eq!(report.counts["images"], 0);
         assert_eq!(report.counts["diagnostics_errors"], 1);
         assert_eq!(report.files_emitted, vec![String::from("src/router.tsx")]);
-        assert!(report.generated_at.ends_with('Z') && report.generated_at.len() == 20, "{}", report.generated_at);
+        assert!(
+            report.generated_at.ends_with('Z') && report.generated_at.len() == 20,
+            "{}",
+            report.generated_at
+        );
         assert!(report.parity_score > 50);
 
         let markdown = report_markdown(&report);
@@ -662,7 +776,7 @@ mod tests {
         assert!(markdown.contains("\n## Features\n\n| Feature | Support | Note | Target |\n"));
         assert!(markdown.contains("| intercepting routes | partial | rendered as the target page (no interception) | dioxus |"));
         assert!(markdown.contains("\n## Diagnostics\n"));
-        assert!(markdown.contains("\n### Errors\n\n- `x-error` bad \\| thing (a.ts)\n"));
+        assert!(markdown.contains("\n### Errors\n\n- `x-error` bad | thing (a.ts)\n"));
         assert!(markdown.contains("\n### Warnings\n\n- `x-warn` careful -- do this\n"));
         assert!(markdown.contains("\n### Info\n\n- `x-info` fyi\n"));
         assert!(markdown.contains("\n## Emitted files\n\n- `src/router.tsx`\n"));
