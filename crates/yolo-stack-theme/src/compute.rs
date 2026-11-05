@@ -105,6 +105,15 @@ pub struct ResolvedBundle {
 }
 
 impl ResolvedBundle {
+    /// Hue and chroma (HCT) of the seed actually used, for sliders.
+    #[must_use]
+    pub fn seed_hue_chroma(&self) -> (f64, f64) {
+        parse_hex(&self.seed).map_or((0.0, 0.0), |argb| {
+            let hct = Hct::from_argb(argb);
+            (hct.hue, hct.chroma)
+        })
+    }
+
     /// Roles of a scheme.
     #[must_use]
     pub fn roles(&self, dark: bool) -> &Roles {

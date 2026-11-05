@@ -72,7 +72,7 @@ pub fn langs() -> Vec<String> {
 
 /// Locale-independent paths (without the `/{lang}` prefix) of every page.
 pub fn all_paths() -> Vec<String> {
-    let mut paths = vec![String::new(), "/characters".to_owned()];
+    let mut paths = vec![String::new(), "/characters".to_owned(), "/theme".to_owned()];
     paths.extend(WIKI.iter().map(|e| format!("/wiki/{}", e.slug)));
     paths.extend(
         manga_chapters()

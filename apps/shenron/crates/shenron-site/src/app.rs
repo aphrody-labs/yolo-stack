@@ -11,21 +11,26 @@ use leptos_router::{
 };
 
 use crate::{
+    boot::BOOT_JS,
     content::{databook_slugs, langs, manga_chapters, wiki_slugs},
     i18n::{t, Lang},
-    pages::{CharactersPage, DatabookPage, HomePage, MangaPage, NotFound, WikiPage},
+    pages::{CharactersPage, DatabookPage, HomePage, MangaPage, NotFound, ThemePage, WikiPage},
+    theme_ui::{ThemeBrand, ThemePet, ThemeRuntime, ThemeSwitcher},
+    themes::DEFAULT_ID,
 };
 
 /// HTML document shell rendered by the server for every route.
 pub fn shell(options: LeptosOptions) -> impl IntoView {
     view! {
         <!DOCTYPE html>
-        <html>
+        <html lang="fr" data-theme=DEFAULT_ID>
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1" />
+                // Sets data-theme and the saved custom stylesheet before the first paint.
+                <script inner_html=BOOT_JS></script>
                 <AutoReload options=options.clone() />
-                <HydrationScripts options />
+                <HydrationScripts options islands=true />
                 <MetaTags />
             </head>
             <body>
@@ -91,6 +96,11 @@ pub fn App() -> impl IntoView {
                         ssr=SsrMode::Static(lang_params())
                     />
                     <Route
+                        path=path!("/:lang/theme")
+                        view=ThemePage
+                        ssr=SsrMode::Static(lang_params())
+                    />
+                    <Route
                         path=path!("/:lang/characters")
                         view=CharactersPage
                         ssr=SsrMode::Static(lang_params())
@@ -138,11 +148,12 @@ fn Layout(children: Children) -> impl IntoView {
 
     view! {
         <Html attr:lang=move || lang.get().code() />
+        <div class="theme-wallpaper" aria-hidden="true"></div>
+        <ThemeRuntime />
+        <ThemePet />
         <header class="site-header">
             <nav aria-label=move || t(lang.get(), "nav.home")>
-                <a class="brand" href=move || format!("/{}", lang.get().code())>
-                    {move || t(lang.get(), "site.name")}
-                </a>
+                <ThemeBrand lang=lang.get_untracked().code().to_owned() />
                 <a href=move || format!("/{}/characters", lang.get().code())>
                     {move || t(lang.get(), "nav.characters")}
                 </a>
@@ -152,6 +163,10 @@ fn Layout(children: Children) -> impl IntoView {
                 <a href=move || format!("/{}/databooks/daizenshuu-7", lang.get().code())>
                     {move || t(lang.get(), "nav.databooks")}
                 </a>
+                <a href=move || format!("/{}/theme", lang.get().code())>
+                    {move || t(lang.get(), "nav.theme")}
+                </a>
+                <ThemeSwitcher lang=lang.get_untracked().code().to_owned() />
                 <div
                     class="lang-switch"
                     role="group"

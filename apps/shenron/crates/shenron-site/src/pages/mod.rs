@@ -5,6 +5,7 @@ pub mod databooks;
 pub mod home;
 pub mod manga;
 pub mod not_found;
+pub mod theme;
 pub mod wiki;
 
 pub use characters::CharactersPage;
@@ -12,6 +13,7 @@ pub use databooks::DatabookPage;
 pub use home::HomePage;
 pub use manga::MangaPage;
 pub use not_found::NotFound;
+pub use theme::ThemePage;
 pub use wiki::WikiPage;
 
 use leptos::{either::Either, prelude::*};
