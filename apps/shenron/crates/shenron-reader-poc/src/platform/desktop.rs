@@ -21,7 +21,8 @@ pub fn surface_target(_mounted: Option<Event<MountedData>>) -> Option<SurfaceTar
 }
 
 pub async fn init_painter(target: SurfaceTarget) -> Result<Painter, String> {
-    let instance = wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
+    let instance =
+        wgpu::Instance::new(wgpu::InstanceDescriptor::new_without_display_handle_from_env());
     let size = target.window.inner_size();
     let surface = instance
         .create_surface(wgpu::SurfaceTarget::Window(Box::new(target.window.clone())))
@@ -50,6 +51,9 @@ pub fn frame_geometry(canvas_css: Rect) -> FrameGeometry {
 /// Initial viewport in CSS px (before the first `onresize`).
 pub fn initial_viewport() -> (f32, f32) {
     let ctx = dioxus::desktop::window();
-    let s = ctx.window.inner_size().to_logical::<f32>(ctx.window.scale_factor());
+    let s = ctx
+        .window
+        .inner_size()
+        .to_logical::<f32>(ctx.window.scale_factor());
     (s.width, s.height)
 }

@@ -1,7 +1,7 @@
 //! Rosegriffon pages rebuilt in Leptos markup. Only the kit's CSS is reused: its MD3 colour
 //! roles, shape/typescale tokens and shadcn bridge variables, compiled by Tailwind into
 //! `rosegriffon.css`. No client JavaScript: tabs, accordion and dialog use native HTML.
-use crate::content::{href, Site};
+use crate::content::{Site, href};
 use leptos::prelude::*;
 
 const KIT: &str = "rosegriffon";
@@ -19,7 +19,9 @@ fn btn(variant: &str, size: &str) -> String {
         "lg" => "h-12 px-6",
         _ => "h-9 px-4",
     };
-    format!("inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-(--md-sys-shape-corner-small) text-sm font-medium transition-colors {v} {s}")
+    format!(
+        "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-(--md-sys-shape-corner-small) text-sm font-medium transition-colors {v} {s}"
+    )
 }
 
 fn badge(variant: &str) -> String {
@@ -29,7 +31,9 @@ fn badge(variant: &str) -> String {
         "outline" => "border border-outline text-foreground",
         _ => "bg-primary text-primary-foreground",
     };
-    format!("inline-flex w-fit items-center rounded-(--md-sys-shape-corner-full) px-2.5 py-0.5 type-label-small {v}")
+    format!(
+        "inline-flex w-fit items-center rounded-(--md-sys-shape-corner-full) px-2.5 py-0.5 type-label-small {v}"
+    )
 }
 
 const CARD: &str = "rounded-(--md-sys-shape-corner-medium) border border-outline-variant bg-card text-card-foreground shadow-(--md-sys-elevation-level1)";

@@ -1,7 +1,7 @@
 //! Shenron pages rebuilt in Leptos markup. Only the kit's CSS is reused: its `--dbz-*` palette,
 //! shadcn bridge variables, `font-title` utility and `.card` / `.btn*` / `.input` / `.badge*`
 //! primitives, compiled by Tailwind into `shenron.css`. No client JavaScript.
-use crate::content::{href, Site};
+use crate::content::{Site, href};
 use leptos::prelude::*;
 
 const KIT: &str = "shenron";

@@ -61,7 +61,8 @@ impl Painter {
         let (device, queue) = adapter
             .request_device(&wgpu::DeviceDescriptor {
                 label: Some("shenron-reader"),
-                required_limits: wgpu::Limits::downlevel_webgl2_defaults().using_resolution(adapter.limits()),
+                required_limits: wgpu::Limits::downlevel_webgl2_defaults()
+                    .using_resolution(adapter.limits()),
                 ..Default::default()
             })
             .await
@@ -196,7 +197,13 @@ impl Painter {
             return;
         }
         let (view, _) = create_texture(&self.device, &self.queue, rgba, width, height);
-        self.bind_group = make_bind_group(&self.device, &self.layout, &self.uniforms, &view, &self.sampler);
+        self.bind_group = make_bind_group(
+            &self.device,
+            &self.layout,
+            &self.uniforms,
+            &view,
+            &self.sampler,
+        );
         self.image_size = (width, height);
         self.has_image = true;
     }
@@ -206,7 +213,8 @@ impl Painter {
     /// above it (desktop) stays visible.
     pub fn paint(&mut self, rect: Rect, view: View, dpr: f32) {
         let frame = match self.surface.get_current_texture() {
-            wgpu::CurrentSurfaceTexture::Success(t) | wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
+            wgpu::CurrentSurfaceTexture::Success(t)
+            | wgpu::CurrentSurfaceTexture::Suboptimal(t) => t,
             wgpu::CurrentSurfaceTexture::Timeout | wgpu::CurrentSurfaceTexture::Occluded => return,
             wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
                 self.surface.configure(&self.device, &self.config);
@@ -217,15 +225,25 @@ impl Painter {
 
         let u = Uniforms {
             rect: [rect.x, rect.y, rect.w, rect.h],
-            pan_zoom: [view.pan_x, view.pan_y, view.zoom, if self.has_image { 1.0 } else { 0.0 }],
+            pan_zoom: [
+                view.pan_x,
+                view.pan_y,
+                view.zoom,
+                if self.has_image { 1.0 } else { 0.0 },
+            ],
             image: [self.image_size.0 as f32, self.image_size.1 as f32, dpr, 0.0],
         };
-        self.queue.write_buffer(&self.uniforms, 0, bytemuck::bytes_of(&u));
+        self.queue
+            .write_buffer(&self.uniforms, 0, bytemuck::bytes_of(&u));
 
-        let target = frame.texture.create_view(&wgpu::TextureViewDescriptor::default());
+        let target = frame
+            .texture
+            .create_view(&wgpu::TextureViewDescriptor::default());
         let mut encoder = self
             .device
-            .create_command_encoder(&wgpu::CommandEncoderDescriptor { label: Some("reader-encoder") });
+            .create_command_encoder(&wgpu::CommandEncoderDescriptor {
+                label: Some("reader-encoder"),
+            });
         {
             let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
                 label: Some("reader-pass"),

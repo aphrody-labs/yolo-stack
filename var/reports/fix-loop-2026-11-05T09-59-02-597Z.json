@@ -1,0 +1,398 @@
+{
+  "timestamp": "2026-11-05T09-59-02-597Z",
+  "root": "/home/ubuntu/yolo-stack-fix",
+  "startSha": "d00faf49b7a72a60ff0ca78ef8cc10e737965c0e",
+  "endSha": "d00faf49b7a72a60ff0ca78ef8cc10e737965c0e",
+  "reportOnly": true,
+  "tools": [
+    "rustfmt"
+  ],
+  "before": {
+    "total": 40,
+    "byTool": {
+      "rustfmt": 40
+    }
+  },
+  "after": {
+    "total": 40,
+    "byTool": {
+      "rustfmt": 40
+    }
+  },
+  "mechanical": {},
+  "agent": {
+    "requested": "auto",
+    "used": "none",
+    "probes": {},
+    "calls": 0,
+    "fixed": []
+  },
+  "unresolved": [],
+  "remaining": [
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/app.rs",
+      "line": 48,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/gpu.rs",
+      "line": 61,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/gpu.rs",
+      "line": 196,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/gpu.rs",
+      "line": 206,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/gpu.rs",
+      "line": 217,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/app.rs",
+      "line": 48,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/gpu.rs",
+      "line": 61,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/gpu.rs",
+      "line": 196,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/gpu.rs",
+      "line": 206,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/gpu.rs",
+      "line": 217,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/main.rs",
+      "line": 21,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/desktop.rs",
+      "line": 21,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/desktop.rs",
+      "line": 50,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/web.rs",
+      "line": 20,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/web.rs",
+      "line": 29,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/theme.rs",
+      "line": 50,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/theme.rs",
+      "line": 58,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/desktop.rs",
+      "line": 21,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/desktop.rs",
+      "line": 50,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/desktop.rs",
+      "line": 21,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/desktop.rs",
+      "line": 50,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/web.rs",
+      "line": 20,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/web.rs",
+      "line": 29,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/web.rs",
+      "line": 20,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/platform/web.rs",
+      "line": 29,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/theme.rs",
+      "line": 50,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/shenron/crates/shenron-reader-poc/src/theme.rs",
+      "line": 58,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/main.rs",
+      "line": 8,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/main.rs",
+      "line": 19,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/main.rs",
+      "line": 51,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/main.rs",
+      "line": 67,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/main.rs",
+      "line": 74,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/rosegriffon.rs",
+      "line": 1,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/rosegriffon.rs",
+      "line": 19,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/rosegriffon.rs",
+      "line": 29,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/shenron.rs",
+      "line": 1,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/rosegriffon.rs",
+      "line": 1,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/rosegriffon.rs",
+      "line": 19,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/rosegriffon.rs",
+      "line": 29,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    },
+    {
+      "tool": "rustfmt",
+      "file": "apps/ui-bench/lane-leptos/src/shenron.rs",
+      "line": 1,
+      "col": 0,
+      "code": "fmt",
+      "message": "rustfmt diff",
+      "severity": "error"
+    }
+  ],
+  "commits": [],
+  "log": [
+    "fix-loop root=/home/ubuntu/yolo-stack-fix HEAD=d00faf49b7a72a60ff0ca78ef8cc10e737965c0e tools=rustfmt reportOnly=true",
+    "baseline: {\"rustfmt\":40} total=40"
+  ]
+}

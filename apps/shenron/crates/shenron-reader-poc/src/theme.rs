@@ -50,7 +50,10 @@ pub fn strip_style(rect: crate::layout::Rect) -> String {
 /// Canvas area: transparent so the wgpu surface underneath (desktop) is visible;
 /// on web the <canvas> element fills this box.
 pub fn canvas_area_style(rect: crate::layout::Rect) -> String {
-    format!("{}background:transparent;cursor:grab;touch-action:none;overflow:hidden;", abs(rect))
+    format!(
+        "{}background:transparent;cursor:grab;touch-action:none;overflow:hidden;",
+        abs(rect)
+    )
 }
 
 pub fn canvas_el_style() -> String {
@@ -58,7 +61,11 @@ pub fn canvas_el_style() -> String {
 }
 
 pub fn button_style(active: bool) -> String {
-    let (bg, fg) = if active { (ACCENT, ACCENT_INK) } else { (SURFACE_HI, TEXT) };
+    let (bg, fg) = if active {
+        (ACCENT, ACCENT_INK)
+    } else {
+        (SURFACE_HI, TEXT)
+    };
     format!(
         "appearance:none;border:1px solid {OUTLINE};border-radius:{RADIUS}px;background:{bg};color:{fg};padding:6px 10px;font:inherit;cursor:pointer;line-height:1;"
     )

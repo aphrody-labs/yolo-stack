@@ -20,7 +20,10 @@ pub fn surface_target(mounted: Option<Event<MountedData>>) -> Option<SurfaceTarg
 }
 
 pub async fn init_painter(target: SurfaceTarget) -> Result<Painter, String> {
-    let instance = wgpu::util::new_instance_with_webgpu_detection(wgpu::InstanceDescriptor::new_without_display_handle()).await;
+    let instance = wgpu::util::new_instance_with_webgpu_detection(
+        wgpu::InstanceDescriptor::new_without_display_handle(),
+    )
+    .await;
     let (w, h) = (target.canvas.width().max(1), target.canvas.height().max(1));
     let surface = instance
         .create_surface(wgpu::SurfaceTarget::Canvas(target.canvas))
@@ -29,7 +32,9 @@ pub async fn init_painter(target: SurfaceTarget) -> Result<Painter, String> {
 }
 
 pub fn dpr() -> f32 {
-    web_sys::window().map(|w| w.device_pixel_ratio() as f32).unwrap_or(1.0)
+    web_sys::window()
+        .map(|w| w.device_pixel_ratio() as f32)
+        .unwrap_or(1.0)
 }
 
 /// Surface = the canvas itself, sized to the Taffy rect times DPR.

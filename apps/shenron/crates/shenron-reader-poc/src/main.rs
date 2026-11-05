@@ -21,7 +21,9 @@ fn main() {
             )
             .with_background_color((0, 0, 0, 0))
             .with_menu(None);
-        dioxus::LaunchBuilder::desktop().with_cfg(cfg).launch(app::App);
+        dioxus::LaunchBuilder::desktop()
+            .with_cfg(cfg)
+            .launch(app::App);
     }
     #[cfg(all(feature = "web", not(feature = "desktop")))]
     {

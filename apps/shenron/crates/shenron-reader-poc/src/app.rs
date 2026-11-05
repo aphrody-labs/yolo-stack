@@ -48,7 +48,8 @@ pub fn App() -> Element {
             if let Some(p) = painter.borrow_mut().as_mut() {
                 let g = platform::frame_geometry(c.canvas);
                 p.resize(g.surface_w, g.surface_h);
-                let v_px = View { pan_x: v.pan_x * g.dpr, pan_y: v.pan_y * g.dpr, zoom: v.zoom * g.dpr };
+                let v_px =
+                    View { pan_x: v.pan_x * g.dpr, pan_y: v.pan_y * g.dpr, zoom: v.zoom * g.dpr };
                 p.paint(g.rect_px, v_px, g.dpr);
             }
         });
