@@ -50,6 +50,7 @@
   --yolo-tertiary-fixed-dim: #f2bd7a;
   --yolo-on-tertiary-fixed: #2a1800;
   --yolo-on-tertiary-fixed-variant: #633f06;
+  --yolo-focus-ring: #a33f00;
   --yolo-space: 8px;
   --yolo-radius-sm: 4px;
   --yolo-radius-md: 10px;
@@ -127,6 +128,7 @@
     --yolo-tertiary-fixed-dim: #f2bd7a;
     --yolo-on-tertiary-fixed: #2a1800;
     --yolo-on-tertiary-fixed-variant: #633f06;
+    --yolo-focus-ring: #ffb596;
     --yolo-wallpaper: var(--yolo-wallpaper-dark);
     --yolo-wallpaper-dominant: var(--yolo-wallpaper-dominant-dark);
   }
@@ -182,6 +184,7 @@
   --yolo-tertiary-fixed-dim: #f2bd7a;
   --yolo-on-tertiary-fixed: #2a1800;
   --yolo-on-tertiary-fixed-variant: #633f06;
+  --yolo-focus-ring: #a33f00;
   --yolo-wallpaper: var(--yolo-wallpaper-light);
   --yolo-wallpaper-dominant: var(--yolo-wallpaper-dominant-light);
 }
@@ -236,6 +239,7 @@
   --yolo-tertiary-fixed-dim: #f2bd7a;
   --yolo-on-tertiary-fixed: #2a1800;
   --yolo-on-tertiary-fixed-variant: #633f06;
+  --yolo-focus-ring: #ffb596;
   --yolo-wallpaper: var(--yolo-wallpaper-dark);
   --yolo-wallpaper-dominant: var(--yolo-wallpaper-dominant-dark);
 }
