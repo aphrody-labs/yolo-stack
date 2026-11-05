@@ -9,6 +9,7 @@
 //! (tokens come from `yolo_tokens`).
 
 use std::collections::BTreeSet;
+use std::fmt::Write as _;
 
 use serde_json::{Map, Value, json};
 
@@ -111,11 +112,10 @@ pub fn emit_leptos_project(analysis: &ProjectAnalysis) -> Vec<EmittedFile> {
             "MetaTags",
         ],
     );
-    let origin = root_meta
-        .metadata_base
-        .clone()
-        .map(|b| b.trim_end_matches('/').to_owned())
-        .unwrap_or_else(|| String::from("https://example.com"));
+    let origin = root_meta.metadata_base.clone().map_or_else(
+        || String::from("https://example.com"),
+        |b| b.trim_end_matches('/').to_owned(),
+    );
     let ctx = Ctx {
         analysis,
         package: crate_name(&analysis.name),
@@ -274,15 +274,17 @@ fn emit_routes(ctx: &Ctx<'_>, node: &NestNode<'_>, parent: &str, indent: usize, 
                 let fields = route_fields(page);
                 let path = leptos_route_path(page, &fields, parent);
                 if let Some(Value::Number(seconds)) = &page.segment_config.revalidate {
-                    out.push_str(&format!(
-                        "{pad}// ISR: Next.js revalidated every {seconds}s; chain `.regenerate(|params| async move {{ /* refresh */ }})` on the StaticRoute.\n"
-                    ));
+                    let _ = writeln!(
+                        out,
+                        "{pad}// ISR: Next.js revalidated every {seconds}s; chain `.regenerate(|params| async move {{ /* refresh */ }})` on the StaticRoute."
+                    );
                 }
-                out.push_str(&format!(
-                    "{pad}<Route\n{pad}    path=path!(\"{path}\")\n{pad}    view={}\n{pad}    ssr={}\n{pad}/>\n",
+                let _ = writeln!(
+                    out,
+                    "{pad}<Route\n{pad}    path=path!(\"{path}\")\n{pad}    view={}\n{pad}    ssr={}\n{pad}/>",
                     ctx.page_name(page),
                     ssr_mode(page)
-                ));
+                );
             }
             NestItem::Nest(child) => {
                 let full = leptos_full_path(&child.url_prefix, &[]);
@@ -291,11 +293,12 @@ fn emit_routes(ctx: &Ctx<'_>, node: &NestNode<'_>, parent: &str, indent: usize, 
                     .layout
                     .map(|l| layout_name(ctx.app_dir, l))
                     .unwrap_or_default();
-                out.push_str(&format!(
-                    "{pad}<ParentRoute path=path!(\"{path}\") view={layout}>\n"
-                ));
+                let _ = writeln!(
+                    out,
+                    "{pad}<ParentRoute path=path!(\"{path}\") view={layout}>"
+                );
                 emit_routes(ctx, child, &full, indent + 4, out);
-                out.push_str(&format!("{pad}</ParentRoute>\n"));
+                let _ = writeln!(out, "{pad}</ParentRoute>");
             }
         }
     }
@@ -319,8 +322,10 @@ fn canonical_path_expr(page: &RouteEntry, fields: &[RouteField]) -> String {
     for segment in page.url_pattern.split('/').filter(|s| !s.is_empty()) {
         template.push('/');
         let (_, param, _, _) = crate::routes::classify_segment(segment);
-        if param.is_some() {
-            if let Some(field) = fields.next() {
+        if param.is_some()
+            && let Some(field) = fields.next()
+        {
+            {
                 template.push_str("{}");
                 args.push(format!("{}.get()", field.ident));
                 continue;
@@ -353,29 +358,26 @@ fn page_component(ctx: &Ctx<'_>, page: &RouteEntry) -> String {
         out.push_str("/// TODO(yolo-next): port `generateMetadata` into a `#[server]` resource feeding `SeoHead`.\n");
     }
     if !page.legacy_data_functions.is_empty() {
-        out.push_str(&format!(
-            "/// TODO(yolo-next): port {} into `#[server]` loaders.\n",
+        let _ = writeln!(
+            out,
+            "/// TODO(yolo-next): port {} into `#[server]` loaders.",
             page.legacy_data_functions.join(", ")
-        ));
+        );
     }
-    out.push_str(&format!(
-        "#[component]\nfn {name}() -> impl IntoView {{\n    let lang = current_lang();\n"
-    ));
+    let _ = writeln!(
+        out,
+        "#[component]\nfn {name}() -> impl IntoView {{\n    let lang = current_lang();"
+    );
     for field in &fields {
-        out.push_str(&format!(
-            "    let {} = param(\"{}\");\n",
-            field.ident, field.ident
-        ));
+        let _ = writeln!(out, "    let {} = param(\"{}\");", field.ident, field.ident);
     }
-    out.push_str(&format!(
-        "    let path = {};\n    view! {{\n        <SeoHead\n            lang=lang.get()\n            title=t(&lang.get(), \"{key}.title\")\n            description=t(&lang.get(), \"{key}.description\")\n            canonical=content::url(&lang.get(), &path)\n        />\n        <main>\n            <h1>{{move || t(&lang.get(), \"{key}.title\")}}</h1>\n",
+    let _ = writeln!(
+        out,
+        "    let path = {};\n    view! {{\n        <SeoHead\n            lang=lang.get()\n            title=t(&lang.get(), \"{key}.title\")\n            description=t(&lang.get(), \"{key}.description\")\n            canonical=content::url(&lang.get(), &path)\n        />\n        <main>\n            <h1>{{move || t(&lang.get(), \"{key}.title\")}}</h1>",
         canonical_path_expr(page, &fields)
-    ));
+    );
     for field in &fields {
-        out.push_str(&format!(
-            "            <p>{{move || {}.get()}}</p>\n",
-            field.ident
-        ));
+        let _ = writeln!(out, "            <p>{{move || {}.get()}}</p>", field.ident);
     }
     out.push_str("        </main>\n    }\n}\n\n");
     out
@@ -397,20 +399,22 @@ fn app_rs(ctx: &Ctx<'_>) -> String {
         viewport_content(ctx),
     );
     for (file, name) in &layouts {
-        out.push_str(&format!(
+        let _ = write!(
+            out,
             "/// Layout `{file}`.\n#[component]\nfn {name}() -> impl IntoView {{\n    view! {{ <Outlet/> }}\n}}\n\n"
-        ));
+        );
     }
     for page in &ctx.pages {
         out.push_str(&page_component(ctx, page));
     }
-    out.push_str(&format!(
-        "/// Fallback route{}.\n#[component]\nfn NotFound() -> impl IntoView {{\n    let location = use_location();\n    let lang = Memo::new(move |_| lang_from_path(&location.pathname.get()).to_owned());\n    view! {{\n        <main>\n            <h1>{{move || t(&lang.get(), \"routes.not_found.title\")}}</h1>\n            <p>{{move || t(&lang.get(), \"routes.not_found.description\")}}</p>\n        </main>\n    }}\n}}\n",
+    let _ = writeln!(
+        out,
+        "/// Fallback route{}.\n#[component]\nfn NotFound() -> impl IntoView {{\n    let location = use_location();\n    let lang = Memo::new(move |_| lang_from_path(&location.pathname.get()).to_owned());\n    view! {{\n        <main>\n            <h1>{{move || t(&lang.get(), \"routes.not_found.title\")}}</h1>\n            <p>{{move || t(&lang.get(), \"routes.not_found.description\")}}</p>\n        </main>\n    }}\n}}",
         manifest
             .root_not_found
             .as_deref()
             .map_or(String::new(), |f| format!(" (port `{f}`)"))
-    ));
+    );
     out
 }
 
@@ -474,39 +478,44 @@ fn content_rs(ctx: &Ctx<'_>) -> String {
         } else {
             page.url_pattern.as_str()
         };
-        out.push_str(&format!(
-            "    (\"{}\", \"{}\"),\n",
+        let _ = writeln!(
+            out,
+            "    (\"{}\", \"{}\"),",
             rust_string(&page.url_pattern, false),
             rust_string(path, false)
-        ));
+        );
     }
     out.push_str("];\n\n/// Dynamic routes whose params come from data: `(Next.js URL pattern, source of `generateStaticParams`)`.\npub const DYNAMIC_ROUTES: &[(&str, &str)] = &[\n");
     for page in &dynamic_pages {
-        out.push_str(&format!(
-            "    (\"{}\", \"{}\"),\n",
+        let _ = writeln!(
+            out,
+            "    (\"{}\", \"{}\"),",
             rust_string(&page.url_pattern, false),
             rust_string(&page.file, false)
-        ));
+        );
     }
     out.push_str("];\n\n/// Locale codes as owned strings (static params need `Vec<String>`).\npub fn langs() -> Vec<String> {\n    LANGS.iter().map(|l| (*l).to_owned()).collect()\n}\n\n/// Absolute URL of a locale-independent path (`\"\"` or `/blog/hello`) in `lang`.\npub fn url(lang: &str, path: &str) -> String {\n    format!(\"{SITE_ORIGIN}/{lang}{path}\")\n}\n\n/// Locale-independent path of an absolute URL or of a locale-prefixed path.\npub fn strip_locale(url_or_path: &str) -> String {\n    let path = url_or_path.strip_prefix(SITE_ORIGIN).unwrap_or(url_or_path);\n    let trimmed = path.trim_start_matches('/');\n    match trimmed.split_once('/') {\n        Some((first, rest)) if LANGS.contains(&first) => format!(\"/{rest}\"),\n        None if LANGS.contains(&trimmed) => String::new(),\n        _ if path.is_empty() => String::new(),\n        _ => format!(\"/{trimmed}\"),\n    }\n}\n\n/// Every prerendered path: static routes expanded per locale, dynamic routes once enumerated.\npub async fn all_paths() -> Vec<String> {\n    let mut paths = Vec::new();\n    for lang in LANGS {\n        for (_, path) in STATIC_ROUTES {\n            paths.push(format!(\"/{lang}{path}\"));\n        }\n    }\n");
     for page in &dynamic_pages {
-        out.push_str(&format!(
-            "    // TODO: enumerate from data: `{}` (Next.js `generateStaticParams` in \"{}\").\n",
+        let _ = writeln!(
+            out,
+            "    // TODO: enumerate from data: `{}` (Next.js `generateStaticParams` in \"{}\").",
             page.url_pattern, page.file
-        ));
+        );
     }
     out.push_str("    paths\n}\n\n/// Static params of one route (`lang` plus the route's own params) for `SsrMode::Static`.\npub async fn static_params_for(route: &str) -> StaticParamsMap {\n    let mut map = StaticParamsMap::new();\n    map.insert(\"lang\", langs());\n    match route {\n");
     for page in &dynamic_pages {
-        out.push_str(&format!(
-            "        \"{}\" => {{\n            // TODO: enumerate from data (Next.js `generateStaticParams` in \"{}\").\n",
+        let _ = writeln!(
+            out,
+            "        \"{}\" => {{\n            // TODO: enumerate from data (Next.js `generateStaticParams` in \"{}\").",
             rust_string(&page.url_pattern, false),
             page.file
-        ));
+        );
         for field in route_fields(page) {
-            out.push_str(&format!(
-                "            map.insert(\"{}\", Vec::new());\n",
+            let _ = writeln!(
+                out,
+                "            map.insert(\"{}\", Vec::new());",
                 field.ident
-            ));
+            );
         }
         out.push_str("        }\n");
     }
@@ -725,19 +734,25 @@ fn server_fns_rs(ctx: &Ctx<'_>) -> Option<String> {
             if matches!(method.as_str(), "POST" | "PUT" | "PATCH") {
                 args.push(String::from("body: String"));
             }
-            out.push_str(&format!(
-                "\n/// `{method} {}` from `{}`{}.\n#[server]\npub async fn {name}({}) -> Result<String, ServerFnError> {{\n    // TODO(yolo-next): port the handler body.\n    Ok(String::new())\n}}\n",
+            let _ = writeln!(
+                out,
+                "\n/// `{method} {}` from `{}`{}.\n#[server]\npub async fn {name}({}) -> Result<String, ServerFnError> {{\n    // TODO(yolo-next): port the handler body.\n    Ok(String::new())\n}}",
                 entry.url_pattern,
                 entry.file,
-                if entry.legacy_pages { " (Pages Router API route)" } else { "" },
+                if entry.legacy_pages {
+                    " (Pages Router API route)"
+                } else {
+                    ""
+                },
                 args.join(", ")
-            ));
+            );
         }
     }
     for (name, module, export) in actions {
-        out.push_str(&format!(
-            "\n/// Server Action `{export}` from `{module}`.\n#[server]\npub async fn {name}(input: String) -> Result<String, ServerFnError> {{\n    // TODO(yolo-next): port the action body (receives the serialized form data).\n    Ok(input)\n}}\n"
-        ));
+        let _ = writeln!(
+            out,
+            "\n/// Server Action `{export}` from `{module}`.\n#[server]\npub async fn {name}(input: String) -> Result<String, ServerFnError> {{\n    // TODO(yolo-next): port the action body (receives the serialized form data).\n    Ok(input)\n}}"
+        );
     }
     Some(out)
 }
@@ -818,8 +833,7 @@ mod tests {
         files
             .iter()
             .find(|f| f.path == path)
-            .map(|f| f.contents.as_str())
-            .unwrap_or_else(|| panic!("{path} missing"))
+            .map_or_else(|| panic!("{path} missing"), |f| f.contents.as_str())
     }
 
     #[test]
@@ -855,7 +869,9 @@ mod tests {
             analysis.proxy.is_some()
         );
         assert!(
-            files.iter().all(|f| !f.path.ends_with(".css")),
+            files.iter().all(|f| !std::path::Path::new(&f.path)
+                .extension()
+                .is_some_and(|e| e.eq_ignore_ascii_case("css"))),
             "no CSS in the Leptos lane"
         );
 

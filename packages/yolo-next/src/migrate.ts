@@ -256,13 +256,15 @@ const LOCKFILES = ["package-lock.json", "yarn.lock", "pnpm-lock.yaml", "npm-shri
 
 /** Rewrites a `next ...` script into its Bun equivalent (other scripts are left untouched). */
 export function migrateScript(script: string): string {
+  // Each `next <cmd> [flags]` segment ends before `&&`, `||`, `|`, `;` or the end of the script.
+  const segment = (cmd: string): RegExp => new RegExp(`\\bnext\\s+${cmd}\\b[^&|;]*?(?=\\s*(?:&&|\\|\\||\\||;|$))`, "g");
   return script
-    .replace(/\bnext\s+dev\b[^&|;]*/g, "bun --hot src/server.ts")
-    .replace(/\bnext\s+build\b[^&|;]*/g, "bun run src/build.ts")
-    .replace(/\bnext\s+start\b[^&|;]*/g, "NODE_ENV=production bun src/server.ts")
-    .replace(/\bnext\s+lint\b[^&|;]*/g, "bun lint")
-    .replace(/\bnext\s+export\b[^&|;]*/g, "bun run src/build.ts --export")
-    .replace(/\bnext\s+telemetry\b[^&|;]*/g, "true")
+    .replace(segment("dev"), "bun --hot src/server.ts")
+    .replace(segment("build"), "bun run src/build.ts")
+    .replace(segment("start"), "NODE_ENV=production bun src/server.ts")
+    .replace(segment("lint"), "bun lint")
+    .replace(segment("export"), "bun run src/build.ts --export")
+    .replace(segment("telemetry"), "true")
     .replace(/\s+$/, "");
 }
 

@@ -30,8 +30,8 @@ export function escapeInlineJson(json: string): string {
     .replace(/</g, "\\u003c")
     .replace(/>/g, "\\u003e")
     .replace(/&/g, "\\u0026")
-    .replace(/ /g, "\\u2028")
-    .replace(/ /g, "\\u2029");
+    .replace(new RegExp(String.fromCharCode(0x2028), "g"), "\\u2028")
+    .replace(new RegExp(String.fromCharCode(0x2029), "g"), "\\u2029");
 }
 
 /** Serializes the dehydrated query cache as JSON safe for an inline script. */

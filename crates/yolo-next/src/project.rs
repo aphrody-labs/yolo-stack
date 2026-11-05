@@ -7,9 +7,12 @@ use std::path::Path;
 use serde_json::Value;
 
 use crate::types::{
-    Diagnostic, EmittedFile, ImageUsage, MigrationReport, ProjectAnalysis, RouteKind, Target,
+    Diagnostic, EmittedFile, ImageUsage, MigrationReport, NextConfig, ProjectAnalysis, RouteKind,
+    Target,
 };
-use crate::{cdn, config, emit_bun, emit_dioxus, emit_leptos, fonts, images, proxy, report, routes, rsc};
+use crate::{
+    cdn, config, emit_bun, emit_dioxus, emit_leptos, fonts, images, proxy, report, routes, rsc,
+};
 
 /// Normalizes a path to `/` separators.
 pub fn norm(path: &Path) -> String {
@@ -27,7 +30,12 @@ fn package_facts(root: &Path) -> (Option<String>, Option<String>) {
     let name = value.get("name").and_then(Value::as_str).map(str::to_owned);
     let next_version = ["dependencies", "devDependencies"]
         .iter()
-        .find_map(|k| value.get(k).and_then(|d| d.get("next")).and_then(Value::as_str))
+        .find_map(|k| {
+            value
+                .get(k)
+                .and_then(|d| d.get("next"))
+                .and_then(Value::as_str)
+        })
         .map(str::to_owned);
     (name, next_version)
 }
@@ -51,10 +59,7 @@ fn source_files(root: &Path, dirs: &[&str]) -> Vec<(String, String)> {
                 continue;
             }
             if let Ok(source) = fs::read_to_string(path) {
-                let rel = path
-                    .strip_prefix(root)
-                    .map(norm)
-                    .unwrap_or_else(|_| norm(path));
+                let rel = path.strip_prefix(root).map_or_else(|_| norm(path), norm);
                 out.push((rel, source));
             }
         }
@@ -64,13 +69,15 @@ fn source_files(root: &Path, dirs: &[&str]) -> Vec<(String, String)> {
 }
 
 /// Runs every analysis stage.
+#[allow(clippy::too_many_lines)] // one linear pipeline; splitting it would only scatter the stage order
 pub fn analyze_project(root: &Path) -> ProjectAnalysis {
     let root_str = norm(root);
     let (pkg_name, next_version) = package_facts(root);
     let name = pkg_name.unwrap_or_else(|| {
-        root.file_name()
-            .map(|n| n.to_string_lossy().into_owned())
-            .unwrap_or_else(|| String::from("next-app"))
+        root.file_name().map_or_else(
+            || String::from("next-app"),
+            |n| n.to_string_lossy().into_owned(),
+        )
     });
 
     let mut diagnostics: Vec<Diagnostic> = Vec::new();
@@ -86,11 +93,11 @@ pub fn analyze_project(root: &Path) -> ProjectAnalysis {
                     .unwrap_or_default();
                 match config::parse_next_config(&source, &file_name) {
                     Ok(ok) => ok,
-                    Err(errors) => (Default::default(), errors),
+                    Err(errors) => (NextConfig::default(), errors),
                 }
             }
             Err(err) => (
-                Default::default(),
+                NextConfig::default(),
                 vec![Diagnostic::error(
                     "next-config-unreadable",
                     format!("cannot read next.config: {err}"),
@@ -98,7 +105,7 @@ pub fn analyze_project(root: &Path) -> ProjectAnalysis {
             ),
         },
         None => (
-            Default::default(),
+            NextConfig::default(),
             vec![Diagnostic::info(
                 "next-config-missing",
                 "no next.config.* found; Next.js defaults assumed",
@@ -117,7 +124,7 @@ pub fn analyze_project(root: &Path) -> ProjectAnalysis {
 
     // Proxy
     let proxy_spec = proxy::find_proxy(root).and_then(|path| {
-        let rel = path.strip_prefix(root).map(norm).unwrap_or_else(|_| norm(&path));
+        let rel = path.strip_prefix(root).map_or_else(|_| norm(&path), norm);
         fs::read_to_string(&path)
             .ok()
             .map(|source| proxy::analyze_proxy(&source, &rel))
@@ -172,7 +179,7 @@ pub fn analyze_project(root: &Path) -> ProjectAnalysis {
         next_version,
         config_file: config_file
             .as_ref()
-            .map(|p| p.strip_prefix(root).map(norm).unwrap_or_else(|_| norm(p))),
+            .map(|p| p.strip_prefix(root).map_or_else(|_| norm(p), norm)),
         config: next_config,
         yolo_config,
         config_report,
@@ -201,10 +208,10 @@ pub fn emit(analysis: &ProjectAnalysis, targets: &[Target]) -> Vec<EmittedFile> 
         } else {
             String::new()
         };
-        files.extend(lane.into_iter().map(|f| EmittedFile {
-            path: format!("{prefix}{}", f.path),
-            contents: f.contents,
-        }));
+        files.extend(
+            lane.into_iter()
+                .map(|f| EmittedFile { path: format!("{prefix}{}", f.path), contents: f.contents }),
+        );
     }
     files
 }

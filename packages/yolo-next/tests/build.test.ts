@@ -68,7 +68,8 @@ describe("buildYoloNext", () => {
     const rsc = (await import(Bun.pathToFileURL(result.rscEntry ?? "").href)) as { renderFlight: (input: Record<string, unknown>) => Promise<ReadableStream<Uint8Array>>; modules: Record<string, unknown> };
     const manifest = scanAppDir(root);
     const entry = manifest.entries.find((e) => e.urlPattern === "/");
-    expect(Object.keys(rsc.modules)).toEqual(["app/layout.tsx", "app/page.tsx", "app/components/Counter.tsx", "app/actions.ts"].sort());
+    // Client components are stubbed as client references in the rsc realm, so only route and action modules are mapped.
+    expect(Object.keys(rsc.modules).sort()).toEqual(["app/actions.ts", "app/layout.tsx", "app/page.tsx"]);
     const flight = await new Response(await rsc.renderFlight({ pathname: "/", search: "", params: {}, entry })).text();
     expect(flight).toContain("Hello smoke");
     expect(flight).toContain("app/components/Counter.tsx");
@@ -79,6 +80,33 @@ describe("buildYoloNext", () => {
     expect(html).toContain("<button>2</button>");
     expect(html).toContain("self.__yolo_f");
     expect(html.trimEnd().endsWith("</body></html>")).toBe(true);
+  }, 30_000);
+});
+
+describe("webpack-worker engine on the build output", () => {
+  test("resolveRscEngine picks the bundles and serves HTML, Flight and actions", async () => {
+    const { resolveRscEngine } = await import("../src/rsc-engine.ts");
+    const { serverReferenceId } = await import("../src/plugin.ts");
+    const config = await resolveYoloConfig(defineYoloConfig({}), { root });
+    const engine = await resolveRscEngine({ root, config, packageResolve: false, candidates: [] });
+    expect(engine.name).toBe("webpack-worker");
+    const html = await new Response(await engine.renderHtml({ request: new Request("http://localhost/?q=1") })).text();
+    expect(html).toContain("<h1>Hello smoke</h1>");
+    expect(html).toContain('<script type="module" src="/_yolo/static/chunks/entry-client-');
+    expect(html).toContain("self.__yolo_f");
+    const flight = await new Response(await engine.renderFlight({ request: new Request("http://localhost/") })).text();
+    expect(flight).toContain("Hello smoke");
+    const missing = await new Response(await engine.renderHtml({ request: new Request("http://localhost/missing") })).text();
+    expect(missing).toContain("404");
+    const actionId = serverReferenceId("app/actions.ts", "ping");
+    const response = await engine.handleAction!(new Request("http://localhost/", { method: "POST", headers: { "next-action": actionId, "content-type": "text/plain" }, body: "[41]" }), { actionId });
+    expect(response.status).toBe(200);
+    expect(response.headers.get("content-type")).toBe("text/x-component");
+    const payload = await response.text();
+    expect(payload).toContain('"ok":true');
+    expect(payload).toContain("42");
+    const unknown = await engine.handleAction!(new Request("http://localhost/", { method: "POST", headers: { "next-action": "00dead" }, body: "[]" }), {});
+    expect(unknown.status).toBe(404);
   }, 30_000);
 });
 

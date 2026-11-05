@@ -14,7 +14,18 @@ import { publicUrl } from "./cdn.ts";
 import { headElements, renderHeadTags, resolveMetadataChain } from "./metadata.ts";
 import { yoloNextPlugin } from "./plugin.ts";
 import { loadRouteManifest, matchRoute } from "./router.ts";
+import { renderFlightToHtml, startRscWorker, type RscWorker } from "./rsc.ts";
 import type { Metadata, ResolvedYoloConfig, RouteEntry, RouteManifest, RouteMatch, Viewport } from "./types.ts";
+
+/** Engine forced through `YOLO_RSC_ENGINE` (env) or `experimental.rscEngine` (next.config). */
+export function forcedRscEngine(config?: ResolvedYoloConfig, env: Record<string, string | undefined> = Bun.env): RscEngineName | undefined {
+  const candidates = [env.YOLO_RSC_ENGINE, (config?.next.experimental as { rscEngine?: unknown } | undefined)?.rscEngine];
+  for (const value of candidates) {
+    if (value === "fullstack" || value === "webpack-worker" || value === "inline") return value;
+    if (value === "worker" || value === "webpack") return "webpack-worker";
+  }
+  return undefined;
+}
 
 /** Engine identifiers in resolution order. */
 export type RscEngineName = "fullstack" | "webpack-worker" | "inline";
@@ -259,7 +270,7 @@ export async function createWebpackEngine(options: ResolveRscEngineOptions): Pro
   const dist = join(root, distDir);
   const rscFile = join(dist, "server", "rsc", "entry-rsc.js");
   const ssrFile = join(dist, "server", "ssr", "entry-ssr.js");
-  if (!existsSync(rscFile) || !existsSync(ssrFile)) return undefined;
+  if (!existsSync(rscFile) || !existsSync(ssrFile)) return createWorkerEngine(options);
   let rsc: RscBundle;
   let ssr: SsrBundle;
   try {
@@ -309,6 +320,104 @@ export async function createWebpackEngine(options: ResolveRscEngineOptions): Pro
       const m = ctx.manifest ?? manifest ?? loadRouteManifest(root, { distDir });
       const match = ctx.match ?? matchRoute(m, url.pathname);
       return rsc.handleAction(request, { actionId: ctx.actionId, url: url.href, pathname: url.pathname, search: url.search, params: match?.params ?? {}, entry: match?.entry });
+    },
+  };
+}
+
+// ---------------------------------------------------------------------------
+// 2b. react-server-dom-webpack worker (no build: `bun --conditions=react-server rsc-worker.ts`)
+// ---------------------------------------------------------------------------
+
+/** Whether `react-server-dom-webpack/server.edge` resolves from `root`. */
+export function reactServerDomWebpackAvailable(root: string): boolean {
+  for (const from of [root, import.meta.dir]) {
+    try {
+      Bun.resolveSync("react-server-dom-webpack/server.edge", from);
+      return true;
+    } catch {
+      // try the next base directory
+    }
+  }
+  return false;
+}
+
+/**
+ * Engine rendering the route modules in an RSC worker process (real Flight renderer) and streaming
+ * the HTML through `renderFlightToHtml` in this process. Used when no production bundles exist.
+ */
+export function createWorkerEngine(options: ResolveRscEngineOptions): RscEngine | undefined {
+  const root = resolve(options.root);
+  if (!reactServerDomWebpackAvailable(root)) return undefined;
+  const log = options.log ?? (() => {});
+  const distDir = options.config?.distDir ?? ".yolo";
+  let manifest = options.manifest;
+  const getManifest = (input: RscRenderInput | RscActionContext): RouteManifest => {
+    manifest ??= input.manifest ?? loadRouteManifest(root, { distDir });
+    return manifest;
+  };
+  let workerPromise: Promise<RscWorker> | undefined;
+  const worker = (): Promise<RscWorker> => {
+    workerPromise ??= startRscWorker({ root, env: { NODE_ENV: options.dev === false ? "production" : (Bun.env.NODE_ENV ?? "development") } });
+    return workerPromise;
+  };
+  let inline: RscEngine | undefined;
+  const fallback = (error: unknown): RscEngine => {
+    if (!inline) {
+      log(`webpack-worker engine failed, falling back to inline: ${error instanceof Error ? error.message : String(error)}`);
+      inline = createInlineEngine({ root, config: options.config, manifest, log });
+    }
+    return inline;
+  };
+  const renderFlight = async (input: RscRenderInput): Promise<ReadableStream<Uint8Array>> => {
+    const url = input.url ?? new URL(input.request.url);
+    const m = getManifest(input);
+    const match = input.match ?? matchRoute(m, url.pathname);
+    const entry = match?.entry.kind === "page" ? match.entry : undefined;
+    if (!entry) throw new Error(`no page route for ${url.pathname}`);
+    const headers: Record<string, string> = {};
+    input.request.headers.forEach((value, key) => {
+      headers[key] = value;
+    });
+    const response = await (await worker()).render({
+      pathname: url.pathname,
+      search: url.search,
+      headers,
+      routeFile: join(root, entry.file),
+      layoutFiles: entry.layouts.map((file) => join(root, file)),
+      templateFiles: entry.templates.map((file) => join(root, file)),
+      ...(entry.loading ? { loadingFile: join(root, entry.loading) } : {}),
+      params: match?.params ?? {},
+    });
+    if (response.status !== 200 || !response.body) throw new Error(`worker render failed (${response.status}): ${await response.text()}`);
+    return response.body;
+  };
+  return {
+    name: "webpack-worker",
+    details: { mode: "worker", root },
+    async renderFlight(input) {
+      try {
+        return await renderFlight(input);
+      } catch (error) {
+        return fallback(error).renderFlight(input);
+      }
+    },
+    async renderHtml(input) {
+      try {
+        const flightStream = await renderFlight(input);
+        return await renderFlightToHtml({
+          flightStream,
+          ...(input.bootstrapModules ? { bootstrapScripts: input.bootstrapModules } : {}),
+          ...(input.bootstrapScriptContent ? { bootstrapScriptContent: input.bootstrapScriptContent } : {}),
+          ...(input.nonce ? { nonce: input.nonce } : {}),
+          ...(input.signal ? { signal: input.signal } : {}),
+          ...(input.metadata ? { headHtml: renderHeadTags(input.metadata, input.viewport) } : {}),
+        });
+      } catch (error) {
+        return fallback(error).renderHtml(input);
+      }
+    },
+    async handleAction(request) {
+      return (await worker()).action(request);
     },
   };
 }
@@ -472,8 +581,10 @@ export async function resolveRscEngine(options: ResolveRscEngineOptions): Promis
   const root = resolve(options.root);
   const log = options.log ?? (() => {});
   const inline = (): RscEngine => createInlineEngine({ root, config: options.config, manifest: options.manifest, log });
-  if (options.prefer === "inline") return inline();
-  if (options.prefer === undefined || options.prefer === "fullstack") {
+  const prefer = options.prefer ?? forcedRscEngine(options.config);
+  options = { ...options, prefer };
+  if (prefer === "inline") return inline();
+  if (prefer === undefined || prefer === "fullstack") {
     try {
       const found = await importFullstack(options);
       if (found) {

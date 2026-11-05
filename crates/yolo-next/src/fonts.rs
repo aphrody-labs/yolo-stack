@@ -29,8 +29,7 @@ use crate::rsc::{
     static_json, static_string, string_list, unwrap_ts,
 };
 use crate::types::{
-    FallbackOverrides, FontFaceAsset, FontMetrics, FontPlan, FontRequest, FontSource,
-    LocalFontSrc,
+    FallbackOverrides, FontFaceAsset, FontMetrics, FontPlan, FontRequest, FontSource, LocalFontSrc,
 };
 
 /// User agent that makes Google Fonts return `woff2` + `unicode-range` subsets (next/font).
@@ -161,10 +160,14 @@ pub fn extract_font_requests(source: &str, file: &str) -> Vec<FontRequest> {
             let callee_name = callee.name.as_str();
             let options = call.arguments.first().and_then(Argument::as_expression);
             if let Some((_, imported)) = google.iter().find(|(name, _)| name == callee_name) {
-                let source = FontSource::Google {
-                    family: imported.replace('_', " "),
-                };
-                requests.push(build_request(id.name.as_str(), imported, source, options, file));
+                let source = FontSource::Google { family: imported.replace('_', " ") };
+                requests.push(build_request(
+                    id.name.as_str(),
+                    imported,
+                    source,
+                    options,
+                    file,
+                ));
             } else if local.iter().any(|name| name == callee_name) {
                 let (src, string_form) = options
                     .and_then(object_entries)
@@ -237,16 +240,20 @@ fn build_request(
 
 /// `src: "./font.woff2"` takes the top-level `weight` / `style` (`validateLocalFontFunctionCall`).
 fn inherit_single_src_defaults(request: &mut FontRequest) {
-    let weight = (request.weights.len() == 1).then(|| request.weights.first().cloned()).flatten();
-    let style = (request.styles.len() == 1).then(|| request.styles.first().cloned()).flatten();
-    if let FontSource::Local { src } = &mut request.source {
-        if let [single] = src.as_mut_slice() {
-            if single.weight.is_none() {
-                single.weight = weight;
-            }
-            if single.style.is_none() {
-                single.style = style;
-            }
+    let weight = (request.weights.len() == 1)
+        .then(|| request.weights.first().cloned())
+        .flatten();
+    let style = (request.styles.len() == 1)
+        .then(|| request.styles.first().cloned())
+        .flatten();
+    if let FontSource::Local { src } = &mut request.source
+        && let [single] = src.as_mut_slice()
+    {
+        if single.weight.is_none() {
+            single.weight = weight;
+        }
+        if single.style.is_none() {
+            single.style = style;
         }
     }
 }
@@ -254,25 +261,14 @@ fn inherit_single_src_defaults(request: &mut FontRequest) {
 /// `(entries, src_was_a_string)`.
 fn parse_local_src(value: &Expression<'_>) -> (Vec<LocalFontSrc>, bool) {
     if let Some(path) = static_string(value) {
-        return (
-            vec![LocalFontSrc {
-                path,
-                weight: None,
-                style: None,
-            }],
-            true,
-        );
+        return (vec![LocalFontSrc { path, weight: None, style: None }], true);
     }
     let entries = array_items(value)
         .unwrap_or_default()
         .into_iter()
         .filter_map(|item| {
             if let Some(path) = static_string(item) {
-                return Some(LocalFontSrc {
-                    path,
-                    weight: None,
-                    style: None,
-                });
+                return Some(LocalFontSrc { path, weight: None, style: None });
             }
             let mut src = LocalFontSrc::default();
             for (key, value) in object_entries(item)? {
@@ -348,8 +344,13 @@ pub fn google_css2_url(request: &FontRequest) -> Option<String> {
     };
     let has_italic = styles.contains(&"italic");
     let has_normal = styles.contains(&"normal");
-    let ital: Option<Vec<&str>> =
-        has_italic.then(|| if has_normal { vec!["0", "1"] } else { vec!["1"] });
+    let ital: Option<Vec<&str>> = has_italic.then(|| {
+        if has_normal {
+            vec!["0", "1"]
+        } else {
+            vec!["1"]
+        }
+    });
 
     let mut weights: Vec<String> = Vec::new();
     for weight in &request.weights {
@@ -450,7 +451,7 @@ fn slug(value: &str) -> String {
 }
 
 /// Family used in CSS: the Google family, or for local fonts the `font-family` declaration
-/// override, else the PascalCase binding (`calSans` -> `CalSans`).
+/// override, else the `PascalCase` binding (`calSans` -> `CalSans`).
 fn plan_family(request: &FontRequest) -> String {
     match &request.source {
         FontSource::Google { family } => family.clone(),
@@ -458,7 +459,10 @@ fn plan_family(request: &FontRequest) -> String {
             .declarations
             .iter()
             .find(|(prop, _)| prop.eq_ignore_ascii_case("font-family"))
-            .map_or_else(|| pascal_case(&request.binding), |(_, value)| strip_quotes(value)),
+            .map_or_else(
+                || pascal_case(&request.binding),
+                |(_, value)| strip_quotes(value),
+            ),
     }
 }
 
@@ -556,9 +560,10 @@ fn local_faces(
             .rsplit(['/', '\\'])
             .next()
             .unwrap_or(entry.path.as_str());
-        let ext = file_name
-            .rsplit_once('.')
-            .map_or_else(|| String::from("woff2"), |(_, ext)| ext.to_ascii_lowercase());
+        let ext = file_name.rsplit_once('.').map_or_else(
+            || String::from("woff2"),
+            |(_, ext)| ext.to_ascii_lowercase(),
+        );
         let format = extension_to_format(&ext).unwrap_or("woff2");
         let local_path = format!("{route}/{file_name}");
         let weight = entry.weight.clone().or_else(|| default_weight.clone());
@@ -773,7 +778,8 @@ pub fn rewrite_font_css(
                 .find(|(key, _)| key == name)
                 .map(|(_, value)| value.clone())
         };
-        let family = get("font-family").map_or_else(|| default_family.clone(), |f| strip_quotes(&f));
+        let family =
+            get("font-family").map_or_else(|| default_family.clone(), |f| strip_quotes(&f));
         let weight = get("font-weight").unwrap_or_else(|| String::from("400"));
         let style = get("font-style").unwrap_or_else(|| String::from("normal"));
         let unicode_range = get("unicode-range");
@@ -835,10 +841,7 @@ struct Tables {
 }
 
 fn read_tag(bytes: &[u8], offset: usize) -> Option<[u8; 4]> {
-    bytes
-        .get(offset..offset.checked_add(4)?)?
-        .try_into()
-        .ok()
+    bytes.get(offset..offset.checked_add(4)?)?.try_into().ok()
 }
 
 fn read_u16(bytes: &[u8], offset: usize) -> Option<u16> {
@@ -906,7 +909,11 @@ fn glyph_index_format4(bytes: &[u8], sub: usize, code: u32) -> Option<u16> {
             + usize::from(range_offset)
             + usize::from(code - start) * 2;
         let glyph = read_u16(bytes, address)?;
-        return Some(if glyph == 0 { 0 } else { glyph.wrapping_add(delta) });
+        return Some(if glyph == 0 {
+            0
+        } else {
+            glyph.wrapping_add(delta)
+        });
     }
     Some(0)
 }
@@ -1134,10 +1141,18 @@ pub fn font_class_css(plan: &FontPlan) -> String {
     if let Some(style) = single_style(&plan.request) {
         declarations.push(format!("font-style: {style}"));
     }
-    let _ = writeln!(css, ".{} {{ {}; }}", plan.class_name, declarations.join("; "));
-    if let (Some(variable_class), Some(variable)) = (&plan.variable_class, &plan.request.variable)
-    {
-        let _ = writeln!(css, ".{variable_class} {{ {variable}: {}; }}", plan.family_css);
+    let _ = writeln!(
+        css,
+        ".{} {{ {}; }}",
+        plan.class_name,
+        declarations.join("; ")
+    );
+    if let (Some(variable_class), Some(variable)) = (&plan.variable_class, &plan.request.variable) {
+        let _ = writeln!(
+            css,
+            ".{variable_class} {{ {variable}: {}; }}",
+            plan.family_css
+        );
     }
     if let Some(fallback) = &plan.fallback {
         let family = plan_family(&plan.request);
@@ -1157,7 +1172,10 @@ pub fn font_class_css(plan: &FontPlan) -> String {
 /// `(sans, mono)` font stacks of a yolo-ui preset.
 pub fn preset_font_stack(preset: YoloThemePreset) -> (String, String) {
     let style = preset.style();
-    (style.font_family_ui.to_owned(), style.font_family_mono.to_owned())
+    (
+        style.font_family_ui.to_owned(),
+        style.font_family_mono.to_owned(),
+    )
 }
 
 /// `.yolo/fonts.json` manifest.
@@ -1197,6 +1215,7 @@ pub fn fonts_manifest_json(plans: &[FontPlan]) -> Value {
 }
 
 #[cfg(test)]
+#[allow(clippy::assert_is_empty)] // `assert!(x.is_empty())` reads better than typed empty arrays
 mod tests {
     use std::path::Path;
 
@@ -1253,9 +1272,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         FontRequest {
             binding: String::from("font"),
             import_name: family.replace(' ', "_"),
-            source: FontSource::Google {
-                family: family.to_owned(),
-            },
+            source: FontSource::Google { family: family.to_owned() },
             subsets: vec![String::from("latin")],
             weights: weights.iter().map(|w| (*w).to_owned()).collect(),
             styles: styles.iter().map(|s| (*s).to_owned()).collect(),
@@ -1277,9 +1294,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         assert_eq!(inter.import_name, "Inter");
         assert_eq!(
             inter.source,
-            FontSource::Google {
-                family: String::from("Inter")
-            }
+            FontSource::Google { family: String::from("Inter") }
         );
         assert_eq!(inter.subsets, vec!["latin"]);
         assert_eq!(inter.display.as_deref(), Some("swap"));
@@ -1291,9 +1306,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         assert_eq!(mono.import_name, "Roboto_Mono");
         assert_eq!(
             mono.source,
-            FontSource::Google {
-                family: String::from("Roboto Mono")
-            }
+            FontSource::Google { family: String::from("Roboto Mono") }
         );
         assert_eq!(mono.weights, vec!["400", "700"]);
         assert_eq!(mono.variable.as_deref(), Some("--font-mono"));
@@ -1309,7 +1322,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         assert_eq!(src[0].weight.as_deref(), Some("600"));
         assert_eq!(src[0].style.as_deref(), Some("normal"));
         assert_eq!(cal.variable.as_deref(), Some("--font-display"));
-        assert_eq!(cal.adjust_font_fallback, Some(Value::String(String::from("Arial"))));
+        assert_eq!(
+            cal.adjust_font_fallback,
+            Some(Value::String(String::from("Arial")))
+        );
         assert_eq!(cal.file, "app/layout.tsx");
     }
 
@@ -1328,9 +1344,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         assert_eq!(serif.import_name, "Playfair_Display");
         assert_eq!(
             serif.source,
-            FontSource::Google {
-                family: String::from("Playfair Display")
-            }
+            FontSource::Google { family: String::from("Playfair Display") }
         );
         assert_eq!(serif.weights, vec!["700"]);
         assert_eq!(serif.styles, vec!["normal", "italic"]);
@@ -1371,7 +1385,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         let italic = google_request("Inter", &["700", "400"], &["normal", "italic"]);
         assert_eq!(
             google_css2_url(&italic).as_deref(),
-            Some("https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,700;1,400;1,700&display=swap")
+            Some(
+                "https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,400;0,700;1,400;1,700&display=swap"
+            )
         );
         let mut range = google_request("Inter", &["100 900"], &[]);
         range.display = Some(String::from("optional"));
@@ -1407,8 +1423,15 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         assert_eq!(cyrillic.style, "normal");
         assert_eq!(cyrillic.format, "woff2");
         assert!(cyrillic.local_path.starts_with("/_yolo/fonts/inter-"));
-        assert!(cyrillic.local_path.ends_with(".woff2"));
-        assert_eq!(cyrillic.local_path.len(), "/_yolo/fonts/inter-".len() + 12 + ".woff2".len());
+        assert!(
+            Path::new(&cyrillic.local_path)
+                .extension()
+                .is_some_and(|ext| ext.eq_ignore_ascii_case("woff2"))
+        );
+        assert_eq!(
+            cyrillic.local_path.len(),
+            "/_yolo/fonts/inter-".len() + 12 + ".woff2".len()
+        );
         assert!(
             cyrillic
                 .unicode_range
@@ -1418,7 +1441,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         let latin = &assets[1];
         assert_eq!(latin.subset.as_deref(), Some("latin"));
         assert!(latin.preload);
-        assert!(latin.unicode_range.as_deref().is_some_and(|r| r.starts_with("U+0000-00FF")));
+        assert!(
+            latin
+                .unicode_range
+                .as_deref()
+                .is_some_and(|r| r.starts_with("U+0000-00FF"))
+        );
         assert!(css.contains(&format!("src: url({}) format('woff2')", latin.local_path)));
         assert_ne!(cyrillic.local_path, latin.local_path);
 
@@ -1506,7 +1534,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         ttc.extend(0x0001_0000u32.to_be_bytes());
         ttc.extend(1u32.to_be_bytes());
         ttc.extend(16u32.to_be_bytes());
-        ttc.extend(&bytes);
+        // TTC table offsets are absolute: shift every record past the 16-byte header.
+        let mut shifted = bytes.clone();
+        for index in 0..5 {
+            let at = 12 + index * 16 + 8;
+            let offset = u32::from_be_bytes(shifted[at..at + 4].try_into().expect("offset")) + 16;
+            shifted[at..at + 4].copy_from_slice(&offset.to_be_bytes());
+        }
+        ttc.extend(&shifted);
         assert_eq!(parse_sfnt_metrics(&ttc, "TTC").map(|m| m.ascent), Some(900));
         for cut in [0, 3, 12, 40, 100] {
             let _ = parse_sfnt_metrics(&bytes[..cut.min(bytes.len())], "cut");
@@ -1570,13 +1605,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             fallback_font_for(&google_request("Playfair Display", &[], &[]), None).family,
             "Times New Roman"
         );
-        assert_eq!(fallback_font_for(&google_request("Roboto Serif", &[], &[]), None).family, "Times New Roman");
-        assert_eq!(fallback_font_for(&google_request("Roboto Mono", &[], &[]), None).family, "Arial");
-        assert_eq!(fallback_font_for(&google_request("Noto Sans", &[], &[]), None).family, "Arial");
-        let metrics = FontMetrics {
-            family: String::from("EB Garamond"),
-            ..arial_metrics()
-        };
+        assert_eq!(
+            fallback_font_for(&google_request("Roboto Serif", &[], &[]), None).family,
+            "Times New Roman"
+        );
+        assert_eq!(
+            fallback_font_for(&google_request("Roboto Mono", &[], &[]), None).family,
+            "Arial"
+        );
+        assert_eq!(
+            fallback_font_for(&google_request("Noto Sans", &[], &[]), None).family,
+            "Arial"
+        );
+        let metrics = FontMetrics { family: String::from("EB Garamond"), ..arial_metrics() };
         assert_eq!(
             fallback_font_for(&google_request("Custom", &[], &[]), Some(&metrics)).family,
             "Times New Roman"
@@ -1590,7 +1631,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         assert!(mono.class_name.starts_with("yolo-font-"));
         assert_eq!(mono.class_name.len(), "yolo-font-".len() + 8);
         let suffix = mono.class_name.trim_start_matches("yolo-font-").to_owned();
-        assert_eq!(mono.variable_class.as_deref(), Some(format!("yolo-font-var-{suffix}").as_str()));
+        assert_eq!(
+            mono.variable_class.as_deref(),
+            Some(format!("yolo-font-var-{suffix}").as_str())
+        );
         assert_eq!(mono.family_css, "'Roboto Mono', 'Roboto Mono Fallback'");
         assert_eq!(
             mono.css2_url.as_deref(),
@@ -1611,14 +1655,19 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         let inter = plan_font(&requests[0], "/_yolo/fonts");
         assert_eq!(inter.preset_role.as_deref(), Some("sans"));
         assert_ne!(inter.class_name, mono.class_name);
-        assert_eq!(plan_font(&requests[0], "/_yolo/fonts").class_name, inter.class_name);
+        assert_eq!(
+            plan_font(&requests[0], "/_yolo/fonts").class_name,
+            inter.class_name
+        );
 
         let mut single = google_request("Inter", &["400"], &["normal"]);
         single.fallback = vec![String::from("system-ui"), String::from("arial")];
         single.adjust_font_fallback = Some(Value::Bool(false));
         let plan = plan_font(&single, "/_yolo/fonts");
         assert_eq!(plan.family_css, "'Inter', system-ui, arial");
-        assert!(plan.css.contains("font-family: 'Inter', system-ui, arial; font-weight: 400; font-style: normal;"));
+        assert!(plan.css.contains(
+            "font-family: 'Inter', system-ui, arial; font-weight: 400; font-style: normal;"
+        ));
         assert_eq!(plan.variable_class, None);
     }
 
@@ -1630,8 +1679,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         assert_eq!(cal.family_css, "'CalSans', 'CalSans Fallback'");
         assert_eq!(cal.preset_role.as_deref(), Some("display"));
         assert_eq!(cal.assets.len(), 1);
-        assert_eq!(cal.assets[0].source, "../public/fonts/CalSans-SemiBold.woff2");
-        assert_eq!(cal.assets[0].local_path, "/_yolo/fonts/CalSans-SemiBold.woff2");
+        assert_eq!(
+            cal.assets[0].source,
+            "../public/fonts/CalSans-SemiBold.woff2"
+        );
+        assert_eq!(
+            cal.assets[0].local_path,
+            "/_yolo/fonts/CalSans-SemiBold.woff2"
+        );
         assert_eq!(cal.assets[0].weight, "600");
         assert_eq!(cal.assets[0].format, "woff2");
         assert!(cal.assets[0].preload);
@@ -1640,7 +1695,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             ".{} {{ font-family: 'CalSans', 'CalSans Fallback'; font-weight: 600; font-style: normal; }}",
             cal.class_name
         )));
-        assert!(cal.css.contains("--font-display: 'CalSans', 'CalSans Fallback'"));
+        assert!(
+            cal.css
+                .contains("--font-display: 'CalSans', 'CalSans Fallback'")
+        );
 
         let mut named = requests[2].clone();
         named.declarations = vec![(String::from("font-family"), String::from("'Cal Sans'"))];
@@ -1664,9 +1722,14 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             x_avg_char_width: 1500,
             az_avg_width: None,
         };
-        plan.fallback = Some(fallback_overrides(&main, &fallback_font_for(&request, Some(&main))));
+        plan.fallback = Some(fallback_overrides(
+            &main,
+            &fallback_font_for(&request, Some(&main)),
+        ));
         let css = font_class_css(&plan);
-        assert!(css.contains("@font-face { font-family: 'Inter Fallback'; src: local('Arial'); ascent-override: "));
+        assert!(css.contains(
+            "@font-face { font-family: 'Inter Fallback'; src: local('Arial'); ascent-override: "
+        ));
         assert!(css.contains("size-adjust: "));
         assert!(css.contains("; }"));
     }
@@ -1674,14 +1737,30 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     #[test]
     fn manifest_shape_and_preset_stacks() {
         let requests = fixture_requests();
-        let plans: Vec<FontPlan> = requests.iter().map(|r| plan_font(r, "/_yolo/fonts")).collect();
+        let plans: Vec<FontPlan> = requests
+            .iter()
+            .map(|r| plan_font(r, "/_yolo/fonts"))
+            .collect();
         let manifest = fonts_manifest_json(&plans);
         let fonts = manifest["fonts"].as_array().expect("fonts array");
         assert_eq!(fonts.len(), 3);
         let inter = &fonts[0];
         for key in [
-            "binding", "family", "css2Url", "userAgent", "className", "variableClass", "variable",
-            "familyCss", "preload", "subsets", "weights", "styles", "display", "assets", "css",
+            "binding",
+            "family",
+            "css2Url",
+            "userAgent",
+            "className",
+            "variableClass",
+            "variable",
+            "familyCss",
+            "preload",
+            "subsets",
+            "weights",
+            "styles",
+            "display",
+            "assets",
+            "css",
         ] {
             assert!(inter.get(key).is_some(), "missing key {key}");
         }
@@ -1690,7 +1769,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         assert_eq!(inter["preload"], true);
         assert_eq!(inter["display"], "swap");
         assert_eq!(fonts[2]["userAgent"], Value::Null);
-        assert_eq!(fonts[2]["assets"][0]["localPath"], "/_yolo/fonts/CalSans-SemiBold.woff2");
+        assert_eq!(
+            fonts[2]["assets"][0]["localPath"],
+            "/_yolo/fonts/CalSans-SemiBold.woff2"
+        );
         assert!(GOOGLE_FONTS_USER_AGENT.contains("Chrome/104.0.0.0"));
 
         for preset in YoloThemePreset::ALL {
@@ -1702,14 +1784,21 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 
     #[test]
     fn fixture_layout_when_present() {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../apps/next-fixture/app/layout.tsx");
+        let path =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../apps/next-fixture/app/layout.tsx");
         let Ok(source) = std::fs::read_to_string(&path) else {
             return;
         };
         let requests = extract_font_requests(&source, "app/layout.tsx");
         assert_fixture_requests(&requests);
-        let plans: Vec<FontPlan> = requests.iter().map(|r| plan_font(r, "/_yolo/fonts")).collect();
-        assert_eq!(plans[0].css2_url.as_deref(), Some("https://fonts.googleapis.com/css2?family=Inter&display=swap"));
+        let plans: Vec<FontPlan> = requests
+            .iter()
+            .map(|r| plan_font(r, "/_yolo/fonts"))
+            .collect();
+        assert_eq!(
+            plans[0].css2_url.as_deref(),
+            Some("https://fonts.googleapis.com/css2?family=Inter&display=swap")
+        );
         assert_eq!(plans[2].assets.len(), 1);
     }
 }

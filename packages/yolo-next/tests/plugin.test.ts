@@ -19,6 +19,7 @@ import {
   yoloNextPlugin,
 } from "../src/plugin.ts";
 import { detectDirective } from "../src/segments.ts";
+import type { ModuleDirective } from "../src/types.ts";
 import { FIXTURE, fakeBuild } from "./helpers.ts";
 
 const posix = (path: string): string => path.replace(/\\/g, "/");
@@ -28,7 +29,7 @@ const pageSource = readFileSync(join(FIXTURE, "app", "page.tsx"), "utf8");
 
 describe("directive detection", () => {
   test("table", () => {
-    const cases: Array<[string, string]> = [
+    const cases: Array<[string, ModuleDirective]> = [
       ['"use client";\nexport const a = 1;', "use-client"],
       ["'use client'\nexport const a = 1;", "use-client"],
       ['// leading comment\n"use client";', "use-client"],

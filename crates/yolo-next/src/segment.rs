@@ -60,15 +60,17 @@ fn source_type_for(file: &str) -> Option<SourceType> {
 
 /// `true` for `.tsx` / `.jsx` files (hooks are collected with the `yolo-react` analyzer).
 fn is_jsx_file(file: &str) -> bool {
-    let lower = file.to_ascii_lowercase();
-    lower.ends_with(".tsx") || lower.ends_with(".jsx")
+    std::path::Path::new(file)
+        .extension()
+        .is_some_and(|ext| ext.eq_ignore_ascii_case("tsx") || ext.eq_ignore_ascii_case("jsx"))
 }
 
 /// Analyzes a page/layout/route module.
 pub fn analyze_segment_module(source: &str, file: &str) -> SegmentConfig {
-    match source_type_for(file) {
-        Some(source_type) => analyze(source, source_type, file, is_jsx_file(file)).config,
-        None => {
+    if let Some(source_type) = source_type_for(file) {
+        analyze(source, source_type, file, is_jsx_file(file)).config
+    } else {
+        {
             let mut config = SegmentConfig {
                 default_export: Some(String::from("MDXContent")),
                 ..SegmentConfig::default()
@@ -430,6 +432,8 @@ fn is_next_import(specifier: &str) -> bool {
 }
 
 /// Walks the module and fills the facts.
+// One pass over the top-level statements; each arm is a distinct export form.
+#[allow(clippy::too_many_lines)]
 fn analyze(source: &str, source_type: SourceType, file: &str, collect_hooks: bool) -> ModuleFacts {
     let allocator = Allocator::default();
     let parsed = Parser::new(&allocator, source, source_type).parse();
@@ -738,32 +742,35 @@ export type { Foo } from "./types";
 
     #[test]
     fn route_handler_methods_in_canonical_order() {
-        let source = r#"
+        let source = r"
 export async function DELETE() {}
 export const PATCH = async () => {};
 async function post() {}
 export { post as POST };
 export async function GET() {}
 export function helper() {}
-"#;
+";
         assert_eq!(
             route_handler_methods(source),
             vec!["GET", "POST", "PATCH", "DELETE"]
         );
-        assert!(route_handler_methods("export const x = 1;").is_empty());
+        assert_eq!(
+            route_handler_methods("export const x = 1;"),
+            Vec::<String>::new()
+        );
         let tsx = "export async function GET() { return <div/>; }";
         assert_eq!(route_handler_methods(tsx), vec!["GET"]);
     }
 
     #[test]
     fn legacy_data_functions_forms() {
-        let source = r#"
+        let source = r"
 export async function getStaticPaths() { return { paths: [], fallback: false }; }
 export const getStaticProps = async () => ({ props: {} });
 function Page() { return <p/>; }
 Page.getInitialProps = async () => ({});
 export default Page;
-"#;
+";
         assert_eq!(
             legacy_data_functions(source),
             vec!["getStaticProps", "getStaticPaths", "getInitialProps"]
@@ -774,7 +781,10 @@ export default Page;
             ),
             vec!["getServerSideProps"]
         );
-        assert!(legacy_data_functions("export default function P() { return null }").is_empty());
+        assert_eq!(
+            legacy_data_functions("export default function P() { return null }"),
+            Vec::<String>::new()
+        );
     }
 
     #[test]

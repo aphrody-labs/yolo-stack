@@ -63,6 +63,7 @@ function absoluteTitle(spec: TitleSpec | undefined): string | undefined {
  */
 export function resolveTitle(parent: Metadata | undefined, child: Metadata): string | undefined {
   const parentSpec = titleSpec(parent?.title);
+  if (typeof child.title === "string") return applyTemplate(parentSpec?.template, child.title);
   const childSpec = titleSpec(child.title);
   if (!childSpec) return absoluteTitle(parentSpec);
   if (childSpec.absolute !== undefined) return childSpec.absolute;

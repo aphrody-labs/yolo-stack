@@ -118,7 +118,7 @@ describe("decodeActionBody", () => {
     if (decoded.ok) {
       expect(decoded.id).toBe("id");
       expect(decoded.isForm).toBe(false);
-      expect(decoded.args.slice(0, 3)).toEqual(["a", 1, "money"]);
+      expect(decoded.args.slice(0, 3)).toEqual(["a", 1, "$money"]);
       expect(decoded.args[3]).toBeUndefined();
       expect(decoded.args[4]).toEqual(new Date("2026-01-01T00:00:00.000Z"));
     }

@@ -128,7 +128,8 @@ let inlineCounter = 0;
 export const INLINE_CLIENT_PREFIX = "yolo-inline:";
 
 /** Registers a component as a client reference resolvable in-process (`yolo-inline:<n>#default`). */
-export function registerInlineClientComponent(component: ComponentLike, name?: string): ClientReferenceLike {
+export function registerInlineClientComponent<P extends object>(input: (props: P) => unknown, name?: string): ClientReferenceLike {
+  const component = input as unknown as ComponentLike;
   const existing = inlineClientByFn.get(component);
   if (existing) {
     return existing;
@@ -612,7 +613,12 @@ async function serializeNode(node: unknown, depth: number): Promise<unknown> {
   const key = elementKey(element);
   const type: unknown = element.type;
   if (typeof type === "string") {
-    return createElement(type, { ...(await serializeProps(props, depth, true)), key: key ?? undefined });
+    const { children, ...rest } = await serializeProps(props, depth, true);
+    const hostProps = { ...rest, key: key ?? undefined };
+    if (Array.isArray(children)) {
+      return createElement(type, hostProps, ...(children as ReactNode[]));
+    }
+    return children === undefined ? createElement(type, hostProps) : createElement(type, hostProps, children as ReactNode);
   }
   if (isClientReference(type)) {
     return clientReferenceElement(type, key, await serializeProps(props, depth, false));

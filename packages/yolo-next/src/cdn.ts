@@ -63,7 +63,8 @@ export function contentTypeWithCharset(path: string): string {
 /** True when the file name carries a content hash (`name-<hash>.ext`, `chunk-<hash>.js`, `name.<hash>.ext`). */
 export function isHashedAsset(path: string): boolean {
   const name = basename(toPosix(path));
-  return /[-.][0-9a-f]{8,}(?:\.[a-z0-9]+)+$/i.test(name) || /^chunk-[0-9a-z]{6,}\.[a-z0-9]+$/i.test(name);
+  // Bun hashes are 8+ base36 chars; require a digit so plain words (`my-component.js`) do not count.
+  return /[-.](?=[0-9a-z]*\d)[0-9a-z]{8,}(?:\.[a-z0-9]+)+$/i.test(name) || /^chunk-[0-9a-z]{6,}\.[a-z0-9]+$/i.test(name);
 }
 
 /** Appends the skew protection query (`?dpl=<deploymentId>`) when the plan has a deployment id. */

@@ -332,24 +332,25 @@ function readBase128(bytes: Uint8Array, offset: number): { value: number; next: 
   throw new Error("invalid UIntBase128");
 }
 
-function sfntTables(bytes: Uint8Array): TableMap | undefined {
-  if (bytes.byteLength < 12) {
+function sfntTables(bytes: Uint8Array, directoryOffset = 0): TableMap | undefined {
+  if (bytes.byteLength < directoryOffset + 12) {
     return undefined;
   }
   const dv = view(bytes);
-  const version = dv.getUint32(0);
-  const signature = tag(bytes, 0);
-  if (signature === "ttcf") {
-    const offset = dv.getUint32(12);
-    return offset < bytes.byteLength ? sfntTables(bytes.subarray(offset)) : undefined;
+  const version = dv.getUint32(directoryOffset);
+  const signature = tag(bytes, directoryOffset);
+  if (signature === "ttcf" && directoryOffset === 0) {
+    // Collections: table record offsets are absolute, so keep the whole buffer and move the directory.
+    const first = dv.getUint32(12);
+    return first < bytes.byteLength ? sfntTables(bytes, first) : undefined;
   }
   if (version !== 0x00010000 && signature !== "OTTO" && signature !== "true") {
     return undefined;
   }
-  const numTables = dv.getUint16(4);
+  const numTables = dv.getUint16(directoryOffset + 4);
   const tables: TableMap = new Map();
   for (let index = 0; index < numTables; index += 1) {
-    const record = 12 + index * 16;
+    const record = directoryOffset + 12 + index * 16;
     if (record + 16 > bytes.byteLength) {
       return undefined;
     }

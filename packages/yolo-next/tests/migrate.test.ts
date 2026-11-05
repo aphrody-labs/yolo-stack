@@ -109,7 +109,9 @@ describe("migrateProject", () => {
     expect(pkg.scripts.start).toBe("NODE_ENV=production bun src/server.ts");
     expect(pkg.dependencies.next).toBeUndefined();
     expect(pkg.devDependencies["eslint-config-next"]).toBeUndefined();
-    expect(pkg.dependencies["@yolo-rs/next"]).toBe("workspace:*");
+    // The scratch copy is not a workspace member of yolo-stack, so the published range is used.
+    expect(pkg.dependencies["@yolo-rs/next"]).toBe("^0.1.0");
+    expect(pkg.dependencies["@tanstack/react-router"]).toBe("^1.170.0");
     expect(pkg.packageManager).toBe("bun@1.4.4");
     expect(result.changes.find((c) => c.path === "package-lock.json")?.kind).toBe("delete");
     expect(existsSync(join(copy, "yolo.config.ts"))).toBe(false);

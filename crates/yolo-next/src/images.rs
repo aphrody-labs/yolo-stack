@@ -73,13 +73,12 @@ fn attr_string(value: Option<&JSXAttributeValue<'_>>) -> Option<String> {
 /// `<Image fill />`, `fill={true}`, `fill="true"`; `fill={false}` / `fill="false"` are false.
 fn attr_bool(value: Option<&JSXAttributeValue<'_>>) -> bool {
     match value {
-        None => true,
+        None | Some(JSXAttributeValue::Element(_) | JSXAttributeValue::Fragment(_)) => true,
         Some(JSXAttributeValue::StringLiteral(lit)) => literal_text(lit) != "false",
         Some(JSXAttributeValue::ExpressionContainer(container)) => container
             .expression
             .as_expression()
             .is_none_or(|expr| static_bool(expr).unwrap_or(true)),
-        Some(_) => true,
     }
 }
 
@@ -91,7 +90,8 @@ fn attr_u32(value: Option<&JSXAttributeValue<'_>>) -> Option<u32> {
         }
         _ => return None,
     };
-    (number >= 0.0 && number.fract() == 0.0 && number <= f64::from(u32::MAX)).then_some(number as u32)
+    (number >= 0.0 && number.fract() == 0.0 && number <= f64::from(u32::MAX))
+        .then_some(number as u32)
 }
 
 struct ImageScan<'f> {
@@ -104,12 +104,19 @@ struct ImageScan<'f> {
 }
 
 impl ImageScan<'_> {
-    fn apply_prop(&self, usage: &mut ImageUsage, name: &str, value: Option<&JSXAttributeValue<'_>>) {
+    fn apply_prop(
+        &self,
+        usage: &mut ImageUsage,
+        name: &str,
+        value: Option<&JSXAttributeValue<'_>>,
+    ) {
         match name {
             "src" => {
                 if let Some(text) = attr_string(value) {
                     usage.src = Some(text);
-                } else if let Some(Expression::Identifier(id)) = attr_expression(value).map(unwrap_ts) {
+                } else if let Some(Expression::Identifier(id)) =
+                    attr_expression(value).map(unwrap_ts)
+                {
                     let binding = id.name.as_str();
                     usage.src_import = Some(binding.to_owned());
                     usage.src = self
@@ -153,11 +160,8 @@ impl Visit for ImageScan<'_> {
         else {
             return;
         };
-        let mut usage = ImageUsage {
-            file: self.file.to_owned(),
-            import_source,
-            ..ImageUsage::default()
-        };
+        let mut usage =
+            ImageUsage { file: self.file.to_owned(), import_source, ..ImageUsage::default() };
         for attr in &element.opening_element.attributes {
             let JSXAttributeItem::Attribute(attribute) = attr else {
                 continue;
@@ -165,7 +169,11 @@ impl Visit for ImageScan<'_> {
             let JSXAttributeName::Identifier(attr_name) = &attribute.name else {
                 continue;
             };
-            self.apply_prop(&mut usage, attr_name.name.as_str(), attribute.value.as_ref());
+            self.apply_prop(
+                &mut usage,
+                attr_name.name.as_str(),
+                attribute.value.as_ref(),
+            );
         }
         usage.remote = usage.src.as_deref().is_some_and(is_remote_src);
         self.usages.push(usage);
@@ -184,12 +192,8 @@ pub fn extract_image_usages(source: &str, file: &str) -> Vec<ImageUsage> {
     let parsed = Parser::new(&allocator, source, source_type_for(file)).parse();
     let program = &parsed.program;
 
-    let mut scan = ImageScan {
-        file,
-        components: Vec::new(),
-        static_imports: Vec::new(),
-        usages: Vec::new(),
-    };
+    let mut scan =
+        ImageScan { file, components: Vec::new(), static_imports: Vec::new(), usages: Vec::new() };
     for stmt in &program.body {
         let Statement::ImportDeclaration(import) = stmt else {
             continue;
@@ -247,10 +251,8 @@ struct ParsedUrl {
 fn parse_url(url: &str) -> Option<ParsedUrl> {
     let (scheme, rest) = if let Some(index) = url.find("://") {
         (url[..index].to_ascii_lowercase(), &url[index + 3..])
-    } else if let Some(rest) = url.strip_prefix("//") {
-        (String::new(), rest)
     } else {
-        return None;
+        (String::new(), url.strip_prefix("//")?)
     };
     let rest = rest.split('#').next().unwrap_or("");
     let authority_end = rest.find(['/', '?']).unwrap_or(rest.len());
@@ -324,9 +326,9 @@ fn segments_match(pattern: &[&str], text: &[&str], min_star_star: usize) -> bool
         Some((&"**", rest)) => {
             (min_star_star..=text.len()).any(|n| segments_match(rest, &text[n..], min_star_star))
         }
-        Some((first, rest)) => text
-            .split_first()
-            .is_some_and(|(head, tail)| segment_matches(first, head) && segments_match(rest, tail, min_star_star)),
+        Some((first, rest)) => text.split_first().is_some_and(|(head, tail)| {
+            segment_matches(first, head) && segments_match(rest, tail, min_star_star)
+        }),
     }
 }
 
@@ -372,23 +374,25 @@ pub fn remote_pattern_matches(pattern: &RemotePattern, url: &str) -> bool {
     let Some(parsed) = parse_url(url) else {
         return false;
     };
-    if let Some(protocol) = &pattern.protocol {
-        if !protocol.trim_end_matches(':').eq_ignore_ascii_case(&parsed.scheme) {
-            return false;
-        }
+    if let Some(protocol) = &pattern.protocol
+        && !protocol
+            .trim_end_matches(':')
+            .eq_ignore_ascii_case(&parsed.scheme)
+    {
+        return false;
     }
-    if let Some(port) = &pattern.port {
-        if port.trim() != parsed.port {
-            return false;
-        }
+    if let Some(port) = &pattern.port
+        && port.trim() != parsed.port
+    {
+        return false;
     }
     if !hostname_matches(&pattern.hostname, &parsed.host) {
         return false;
     }
-    if let Some(search) = &pattern.search {
-        if normalize_search(search) != parsed.search {
-            return false;
-        }
+    if let Some(search) = &pattern.search
+        && normalize_search(search) != parsed.search
+    {
+        return false;
     }
     pathname_matches(pattern.pathname.as_deref().unwrap_or("**"), &parsed.path)
 }
@@ -400,10 +404,10 @@ pub fn local_pattern_matches(pattern: &LocalPattern, path_and_query: &str) -> bo
         None => (path_and_query, ""),
     };
     let search = if search == "?" { "" } else { search };
-    if let Some(wanted) = &pattern.search {
-        if normalize_search(wanted) != search {
-            return false;
-        }
+    if let Some(wanted) = &pattern.search
+        && normalize_search(wanted) != search
+    {
+        return false;
     }
     pathname_matches(pattern.pathname.as_deref().unwrap_or("**"), path)
 }
@@ -546,9 +550,13 @@ pub fn loader_url(
             let (origin, path) = split_origin(src);
             format!("{origin}/{params}/{}", path.trim_start_matches('/'))
         }
-        ImageLoaderKind::Imgix => with_query(src, &format!("auto=format&fit=max&w={width}&q={quality}")),
+        ImageLoaderKind::Imgix => {
+            with_query(src, &format!("auto=format&fit=max&w={width}&q={quality}"))
+        }
         ImageLoaderKind::Akamai => with_query(src, &format!("imwidth={width}")),
-        ImageLoaderKind::Fastly => with_query(src, &format!("auto=webp&width={width}&quality={quality}")),
+        ImageLoaderKind::Fastly => {
+            with_query(src, &format!("auto=webp&width={width}&quality={quality}"))
+        }
         ImageLoaderKind::Supabase => with_query(src, &format!("width={width}&quality={quality}")),
         ImageLoaderKind::Cloudfront => {
             with_query(src, &format!("format=auto&width={width}&quality={quality}"))
@@ -583,7 +591,10 @@ fn vw_percentages(sizes: &str) -> Vec<u32> {
         .split_whitespace()
         .filter_map(|token| {
             let digits: String = token.chars().take_while(char::is_ascii_digit).collect();
-            if digits.is_empty() || digits.len() > 3 || (digits.len() == 3 && !digits.starts_with('1')) {
+            if digits.is_empty()
+                || digits.len() > 3
+                || (digits.len() == 3 && !digits.starts_with('1'))
+            {
                 return None;
             }
             token[digits.len()..]
@@ -635,10 +646,10 @@ fn candidate_widths(
     };
     let mut widths = Vec::new();
     for target in [width, width.saturating_mul(2)] {
-        if let Some(picked) = pick(target) {
-            if !widths.contains(&picked) {
-                widths.push(picked);
-            }
+        if let Some(picked) = pick(target)
+            && !widths.contains(&picked)
+        {
+            widths.push(picked);
         }
     }
     (widths, 'x')
@@ -650,7 +661,12 @@ fn is_svg_src(src: &str) -> bool {
         .is_some_and(|(_, ext)| ext.eq_ignore_ascii_case("svg"))
 }
 
-fn is_unoptimized(usage: &ImageUsage, policy: &ImageOptimizerPolicy, kind: ImageLoaderKind, src: &str) -> bool {
+fn is_unoptimized(
+    usage: &ImageUsage,
+    policy: &ImageOptimizerPolicy,
+    kind: ImageLoaderKind,
+    src: &str,
+) -> bool {
     let lower = src.to_ascii_lowercase();
     usage.unoptimized
         || policy.unoptimized
@@ -677,10 +693,7 @@ pub fn srcset(
         return Vec::new();
     };
     if is_unoptimized(usage, policy, kind, src) {
-        return vec![SrcSetCandidate {
-            url: src.to_owned(),
-            descriptor: String::new(),
-        }];
+        return vec![SrcSetCandidate { url: src.to_owned(), descriptor: String::new() }];
     }
     let quality = coerce_quality(policy, usage.quality);
     let width = if usage.fill { None } else { usage.width };
@@ -757,7 +770,10 @@ pub fn manganis_asset_expr(usage: &ImageUsage, policy: &ImageOptimizerPolicy) ->
         let _ = write!(options, ".with_format(ImageFormat::{format})");
     }
     if let (Some(width), Some(height)) = (usage.width, usage.height) {
-        let _ = write!(options, ".with_size(ImageSize::Manual {{ width: {width}, height: {height} }})");
+        let _ = write!(
+            options,
+            ".with_size(ImageSize::Manual {{ width: {width}, height: {height} }})"
+        );
     }
     if usage.priority {
         options.push_str(".with_preload(true)");
@@ -813,7 +829,11 @@ pub fn image_usage_report(usages: Vec<ImageUsage>, cfg: &ImagesConfig) -> ImageU
         if usage.src_import.is_some() {
             static_count += 1;
         }
-        if !usage.fill && usage.width.is_none() && usage.height.is_none() && usage.src_import.is_none() {
+        if !usage.fill
+            && usage.width.is_none()
+            && usage.height.is_none()
+            && usage.src_import.is_none()
+        {
             diagnostics.push(
                 Diagnostic::warning(
                     "next-image-missing-dimensions",
@@ -880,19 +900,22 @@ pub fn images_manifest_json(policy: &ImageOptimizerPolicy) -> Value {
             })
         })
         .collect();
-    let local_patterns: Value = policy.local_patterns.as_ref().map_or(Value::Null, |patterns| {
-        Value::Array(
-            patterns
-                .iter()
-                .map(|pattern| {
-                    json!({
-                        "pathname": pattern.pathname.as_deref().unwrap_or("**"),
-                        "search": pattern.search,
+    let local_patterns: Value = policy
+        .local_patterns
+        .as_ref()
+        .map_or(Value::Null, |patterns| {
+            Value::Array(
+                patterns
+                    .iter()
+                    .map(|pattern| {
+                        json!({
+                            "pathname": pattern.pathname.as_deref().unwrap_or("**"),
+                            "search": pattern.search,
+                        })
                     })
-                })
-                .collect(),
-        )
-    });
+                    .collect(),
+            )
+        });
     json!({
         "version": 1,
         "images": {
@@ -918,6 +941,7 @@ pub fn images_manifest_json(policy: &ImageOptimizerPolicy) -> Value {
 }
 
 #[cfg(test)]
+#[allow(clippy::assert_is_empty)] // `assert!(x.is_empty())` reads better than typed empty arrays
 mod tests {
     use std::path::Path;
 
@@ -988,10 +1012,7 @@ export default async function HomePage() {
     }
 
     fn pattern(hostname: &str) -> RemotePattern {
-        RemotePattern {
-            hostname: hostname.to_owned(),
-            ..RemotePattern::default()
-        }
+        RemotePattern { hostname: hostname.to_owned(), ..RemotePattern::default() }
     }
 
     fn assert_fixture_usages(usages: &[ImageUsage]) {
@@ -1001,14 +1022,20 @@ export default async function HomePage() {
         assert_eq!(hero.src.as_deref(), Some("@/public/hero.png"));
         assert!(!hero.remote);
         assert!(hero.priority);
-        assert_eq!(hero.sizes.as_deref(), Some("(max-width: 768px) 100vw, 50vw"));
+        assert_eq!(
+            hero.sizes.as_deref(),
+            Some("(max-width: 768px) 100vw, 50vw")
+        );
         assert_eq!(hero.placeholder.as_deref(), Some("blur"));
         assert_eq!(hero.alt.as_deref(), Some("Hero"));
         assert_eq!(hero.import_source, "next/image");
         assert_eq!(hero.width, None);
 
         let remote = &usages[1];
-        assert_eq!(remote.src.as_deref(), Some("https://images.unsplash.com/photo-1"));
+        assert_eq!(
+            remote.src.as_deref(),
+            Some("https://images.unsplash.com/photo-1")
+        );
         assert!(remote.remote);
         assert_eq!(remote.width, Some(800));
         assert_eq!(remote.height, Some(600));
@@ -1017,7 +1044,10 @@ export default async function HomePage() {
         assert_eq!(remote.src_import, None);
 
         let unmatched = &usages[2];
-        assert_eq!(unmatched.src.as_deref(), Some("https://untrusted.example.net/x.png"));
+        assert_eq!(
+            unmatched.src.as_deref(),
+            Some("https://untrusted.example.net/x.png")
+        );
         assert_eq!(unmatched.width, Some(100));
         assert!(unmatched.remote);
     }
@@ -1045,82 +1075,140 @@ export default async function HomePage() {
         assert_eq!(logo.width, Some(32));
         assert!(logo.custom_loader);
         assert!(!logo.priority);
-        assert!(extract_image_usages("export const x = <img src=\"/a.png\" />;", "a.tsx").is_empty());
+        assert!(
+            extract_image_usages("export const x = <img src=\"/a.png\" />;", "a.tsx").is_empty()
+        );
     }
 
     #[test]
     fn remote_pattern_table() {
         let cloudfront = pattern("**.cloudfront.net");
-        assert!(remote_pattern_matches(&cloudfront, "https://a.b.cloudfront.net/img.png"));
-        assert!(remote_pattern_matches(&cloudfront, "https://a.cloudfront.net/img.png"));
-        assert!(!remote_pattern_matches(&cloudfront, "https://cloudfront.net/img.png"));
+        assert!(remote_pattern_matches(
+            &cloudfront,
+            "https://a.b.cloudfront.net/img.png"
+        ));
+        assert!(remote_pattern_matches(
+            &cloudfront,
+            "https://a.cloudfront.net/img.png"
+        ));
+        assert!(!remote_pattern_matches(
+            &cloudfront,
+            "https://cloudfront.net/img.png"
+        ));
         let single = pattern("*.x.com");
         assert!(remote_pattern_matches(&single, "https://a.x.com/p"));
         assert!(remote_pattern_matches(&single, "https://A.X.COM/p"));
         assert!(!remote_pattern_matches(&single, "https://a.b.x.com/p"));
         assert!(!remote_pattern_matches(&single, "https://x.com/p"));
         let middle = pattern("avatars.*.example.com");
-        assert!(remote_pattern_matches(&middle, "https://avatars.sfo1.example.com/u/1"));
-        assert!(!remote_pattern_matches(&middle, "https://avatars.example.com/u/1"));
+        assert!(remote_pattern_matches(
+            &middle,
+            "https://avatars.sfo1.example.com/u/1"
+        ));
+        assert!(!remote_pattern_matches(
+            &middle,
+            "https://avatars.example.com/u/1"
+        ));
 
         let https_only = RemotePattern {
             protocol: Some(String::from("https")),
             ..pattern("images.unsplash.com")
         };
-        assert!(remote_pattern_matches(&https_only, "https://images.unsplash.com/photo-1"));
-        assert!(!remote_pattern_matches(&https_only, "http://images.unsplash.com/photo-1"));
-        assert!(remote_pattern_matches(&https_only, "https://images.unsplash.com:443/photo-1"));
+        assert!(remote_pattern_matches(
+            &https_only,
+            "https://images.unsplash.com/photo-1"
+        ));
+        assert!(!remote_pattern_matches(
+            &https_only,
+            "http://images.unsplash.com/photo-1"
+        ));
+        assert!(remote_pattern_matches(
+            &https_only,
+            "https://images.unsplash.com:443/photo-1"
+        ));
 
         let account = RemotePattern {
             pathname: Some(String::from("/account123/**")),
             ..pattern("example.com")
         };
-        assert!(remote_pattern_matches(&account, "https://example.com/account123/a/b.png"));
-        assert!(remote_pattern_matches(&account, "https://example.com/account123"));
-        assert!(!remote_pattern_matches(&account, "https://example.com/account456/a.png"));
-        let one_segment = RemotePattern {
-            pathname: Some(String::from("/media/*")),
-            ..pattern("example.com")
-        };
-        assert!(remote_pattern_matches(&one_segment, "https://example.com/media/a.png"));
-        assert!(!remote_pattern_matches(&one_segment, "https://example.com/media/a/b.png"));
+        assert!(remote_pattern_matches(
+            &account,
+            "https://example.com/account123/a/b.png"
+        ));
+        assert!(remote_pattern_matches(
+            &account,
+            "https://example.com/account123"
+        ));
+        assert!(!remote_pattern_matches(
+            &account,
+            "https://example.com/account456/a.png"
+        ));
+        let one_segment =
+            RemotePattern { pathname: Some(String::from("/media/*")), ..pattern("example.com") };
+        assert!(remote_pattern_matches(
+            &one_segment,
+            "https://example.com/media/a.png"
+        ));
+        assert!(!remote_pattern_matches(
+            &one_segment,
+            "https://example.com/media/a/b.png"
+        ));
 
-        let port = RemotePattern {
-            port: Some(String::from("8080")),
-            ..pattern("localhost")
-        };
+        let port = RemotePattern { port: Some(String::from("8080")), ..pattern("localhost") };
         assert!(remote_pattern_matches(&port, "http://localhost:8080/a.png"));
         assert!(!remote_pattern_matches(&port, "http://localhost/a.png"));
-        let no_port = RemotePattern {
-            port: Some(String::new()),
-            ..pattern("cdn.example.com")
-        };
-        assert!(remote_pattern_matches(&no_port, "https://cdn.example.com/a.png"));
-        assert!(!remote_pattern_matches(&no_port, "https://cdn.example.com:8443/a.png"));
+        let no_port = RemotePattern { port: Some(String::new()), ..pattern("cdn.example.com") };
+        assert!(remote_pattern_matches(
+            &no_port,
+            "https://cdn.example.com/a.png"
+        ));
+        assert!(!remote_pattern_matches(
+            &no_port,
+            "https://cdn.example.com:8443/a.png"
+        ));
 
-        let search = RemotePattern {
-            search: Some(String::from("?v=1")),
-            ..pattern("cdn.example.com")
-        };
-        assert!(remote_pattern_matches(&search, "https://cdn.example.com/a.png?v=1"));
-        assert!(!remote_pattern_matches(&search, "https://cdn.example.com/a.png?v=2"));
-        assert!(!remote_pattern_matches(&search, "https://cdn.example.com/a.png"));
-        let no_search = RemotePattern {
-            search: Some(String::new()),
-            ..pattern("cdn.example.com")
-        };
-        assert!(remote_pattern_matches(&no_search, "https://cdn.example.com/a.png"));
-        assert!(!remote_pattern_matches(&no_search, "https://cdn.example.com/a.png?v=1"));
-        assert!(!remote_pattern_matches(&pattern("example.com"), "not a url"));
+        let search =
+            RemotePattern { search: Some(String::from("?v=1")), ..pattern("cdn.example.com") };
+        assert!(remote_pattern_matches(
+            &search,
+            "https://cdn.example.com/a.png?v=1"
+        ));
+        assert!(!remote_pattern_matches(
+            &search,
+            "https://cdn.example.com/a.png?v=2"
+        ));
+        assert!(!remote_pattern_matches(
+            &search,
+            "https://cdn.example.com/a.png"
+        ));
+        let no_search = RemotePattern { search: Some(String::new()), ..pattern("cdn.example.com") };
+        assert!(remote_pattern_matches(
+            &no_search,
+            "https://cdn.example.com/a.png"
+        ));
+        assert!(!remote_pattern_matches(
+            &no_search,
+            "https://cdn.example.com/a.png?v=1"
+        ));
+        assert!(!remote_pattern_matches(
+            &pattern("example.com"),
+            "not a url"
+        ));
 
         let local = LocalPattern {
             pathname: Some(String::from("/assets/images/**")),
             search: Some(String::new()),
         };
         assert!(local_pattern_matches(&local, "/assets/images/hero.png"));
-        assert!(!local_pattern_matches(&local, "/assets/images/hero.png?v=1"));
+        assert!(!local_pattern_matches(
+            &local,
+            "/assets/images/hero.png?v=1"
+        ));
         assert!(!local_pattern_matches(&local, "/public/hero.png"));
-        assert!(local_pattern_matches(&LocalPattern::default(), "/anything/at/all.png?x=1"));
+        assert!(local_pattern_matches(
+            &LocalPattern::default(),
+            "/anything/at/all.png?x=1"
+        ));
     }
 
     #[test]
@@ -1139,22 +1227,19 @@ export default async function HomePage() {
             ("akamai", ImageLoaderKind::Akamai),
             ("custom", ImageLoaderKind::Custom),
         ] {
-            let cfg = ImagesConfig {
-                loader: String::from(name),
-                ..ImagesConfig::default()
-            };
+            let cfg = ImagesConfig { loader: String::from(name), ..ImagesConfig::default() };
             assert_eq!(loader_kind(&cfg), kind, "{name}");
         }
-        let unoptimized = ImagesConfig {
-            unoptimized: true,
-            ..ImagesConfig::default()
-        };
+        let unoptimized = ImagesConfig { unoptimized: true, ..ImagesConfig::default() };
         assert_eq!(loader_kind(&unoptimized), ImageLoaderKind::Unoptimized);
 
         let policy = optimizer_policy(&cfg, "/docs");
         assert_eq!(policy.route, "/docs/_yolo/image");
         assert_eq!(policy.compat_routes, vec!["/docs/_next/image"]);
-        assert_eq!(policy.cache_control, "public, max-age={max_age}, must-revalidate");
+        assert_eq!(
+            policy.cache_control,
+            "public, max-age={max_age}, must-revalidate"
+        );
         assert_eq!(policy.minimum_cache_ttl, 86_400);
         assert_eq!(policy.qualities, vec![50, 75, 90]);
         assert_eq!(policy.loader_file, None);
@@ -1164,7 +1249,10 @@ export default async function HomePage() {
             ..ImagesConfig::default()
         };
         let policy = optimizer_policy(&custom_path, "");
-        assert_eq!(policy.compat_routes, vec!["/_next/image", "/images/optimize"]);
+        assert_eq!(
+            policy.compat_routes,
+            vec!["/_next/image", "/images/optimize"]
+        );
         assert_eq!(policy.loader, ImageLoaderKind::Custom);
         assert_eq!(policy.loader_file.as_deref(), Some("./loader.ts"));
     }
@@ -1186,7 +1274,13 @@ export default async function HomePage() {
             "/cdn-cgi/image/width=640,quality=75,format=auto/hero.png"
         );
         assert_eq!(
-            loader_url(ImageLoaderKind::Cloudinary, &policy, "https://res.cloudinary.com/demo/image/upload/sample.jpg", 640, 75),
+            loader_url(
+                ImageLoaderKind::Cloudinary,
+                &policy,
+                "https://res.cloudinary.com/demo/image/upload/sample.jpg",
+                640,
+                75
+            ),
             "https://res.cloudinary.com/f_auto,c_limit,w_640,q_75/demo/image/upload/sample.jpg"
         );
         assert_eq!(
@@ -1194,7 +1288,13 @@ export default async function HomePage() {
             "/f_auto,c_limit,w_640,q_75/sample.jpg"
         );
         assert_eq!(
-            loader_url(ImageLoaderKind::Imgix, &policy, "https://x.imgix.net/a.png?crop=faces", 640, 75),
+            loader_url(
+                ImageLoaderKind::Imgix,
+                &policy,
+                "https://x.imgix.net/a.png?crop=faces",
+                640,
+                75
+            ),
             "https://x.imgix.net/a.png?crop=faces&auto=format&fit=max&w=640&q=75"
         );
         assert_eq!(
@@ -1213,8 +1313,14 @@ export default async function HomePage() {
             loader_url(ImageLoaderKind::Cloudfront, &policy, "/a.png", 640, 75),
             "/a.png?format=auto&width=640&quality=75"
         );
-        assert_eq!(loader_url(ImageLoaderKind::Unoptimized, &policy, "/a.png", 640, 75), "/a.png");
-        assert_eq!(encode_uri_component("a b/c?d=e&f=g!~*'()"), "a%20b%2Fc%3Fd%3De%26f%3Dg!~*'()");
+        assert_eq!(
+            loader_url(ImageLoaderKind::Unoptimized, &policy, "/a.png", 640, 75),
+            "/a.png"
+        );
+        assert_eq!(
+            encode_uri_component("a b/c?d=e&f=g!~*'()"),
+            "a%20b%2Fc%3Fd%3De%26f%3Dg!~*'()"
+        );
     }
 
     #[test]
@@ -1243,7 +1349,9 @@ export default async function HomePage() {
         let widths: Vec<&str> = sized.iter().map(|c| c.descriptor.as_str()).collect();
         assert_eq!(
             widths,
-            vec!["384w", "640w", "750w", "828w", "1080w", "1200w", "1920w", "2048w", "3840w"]
+            vec![
+                "384w", "640w", "750w", "828w", "1080w", "1200w", "1920w", "2048w", "3840w"
+            ]
         );
         assert_eq!(
             sized[0].url,
@@ -1253,7 +1361,10 @@ export default async function HomePage() {
         let fixed = srcset(&usages[1], &policy, ImageLoaderKind::Default);
         assert_eq!(fixed.len(), 2);
         assert_eq!(fixed[0].descriptor, "1x");
-        assert_eq!(fixed[0].url, "/_yolo/image?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1&w=828&q=90");
+        assert_eq!(
+            fixed[0].url,
+            "/_yolo/image?url=https%3A%2F%2Fimages.unsplash.com%2Fphoto-1&w=828&q=90"
+        );
         assert_eq!(fixed[1].descriptor, "2x");
         assert!(fixed[1].url.ends_with("&w=1920&q=90"));
 
@@ -1264,7 +1375,12 @@ export default async function HomePage() {
         };
         let fill_set = srcset(&fill, &policy, ImageLoaderKind::Default);
         let widths: Vec<&str> = fill_set.iter().map(|c| c.descriptor.as_str()).collect();
-        assert_eq!(widths, vec!["640w", "750w", "828w", "1080w", "1200w", "1920w", "2048w", "3840w"]);
+        assert_eq!(
+            widths,
+            vec![
+                "640w", "750w", "828w", "1080w", "1200w", "1920w", "2048w", "3840w"
+            ]
+        );
 
         fill.sizes = Some(String::from("calc(100vw - 2rem)"));
         let all = srcset(&fill, &policy, ImageLoaderKind::Default);
@@ -1288,30 +1404,42 @@ export default async function HomePage() {
         };
         assert_eq!(
             srcset(&unoptimized, &policy, ImageLoaderKind::Default),
-            vec![SrcSetCandidate {
-                url: String::from("/logo.svg"),
-                descriptor: String::new()
-            }]
+            vec![SrcSetCandidate { url: String::from("/logo.svg"), descriptor: String::new() }]
         );
         let passthrough = ImageUsage {
             src: Some(String::from("/a.png")),
             unoptimized: true,
             ..ImageUsage::default()
         };
-        assert_eq!(srcset(&passthrough, &policy, ImageLoaderKind::Default)[0].descriptor, "");
-        assert_eq!(srcset(&huge, &policy, ImageLoaderKind::Unoptimized)[0].url, "/big.png");
+        assert_eq!(
+            srcset(&passthrough, &policy, ImageLoaderKind::Default)[0].descriptor,
+            ""
+        );
+        assert_eq!(
+            srcset(&huge, &policy, ImageLoaderKind::Unoptimized)[0].url,
+            "/big.png"
+        );
         assert!(srcset(&ImageUsage::default(), &policy, ImageLoaderKind::Default).is_empty());
     }
 
     #[test]
     fn format_negotiation() {
         let formats = vec![String::from("image/avif"), String::from("image/webp")];
-        assert_eq!(negotiate_format("image/avif,image/webp,*/*", &formats), Some("image/avif"));
-        assert_eq!(negotiate_format("image/webp,*/*;q=0.8", &formats), Some("image/webp"));
+        assert_eq!(
+            negotiate_format("image/avif,image/webp,*/*", &formats),
+            Some("image/avif")
+        );
+        assert_eq!(
+            negotiate_format("image/webp,*/*;q=0.8", &formats),
+            Some("image/webp")
+        );
         assert_eq!(negotiate_format("image/png,*/*", &formats), None);
         assert_eq!(negotiate_format("", &formats), None);
         let webp_first = vec![String::from("image/webp"), String::from("image/avif")];
-        assert_eq!(negotiate_format("image/avif,image/webp", &webp_first), Some("image/webp"));
+        assert_eq!(
+            negotiate_format("image/avif,image/webp", &webp_first),
+            Some("image/webp")
+        );
     }
 
     #[test]
@@ -1346,8 +1474,14 @@ export default async function HomePage() {
         let cfg = fixture_config();
         let usages = extract_image_usages(PAGE_TSX, "app/page.tsx");
         let report = image_usage_report(usages, &cfg);
-        assert_eq!(report.remote_hosts, vec!["images.unsplash.com", "untrusted.example.net"]);
-        assert_eq!(report.unmatched_remote, vec!["https://untrusted.example.net/x.png"]);
+        assert_eq!(
+            report.remote_hosts,
+            vec!["images.unsplash.com", "untrusted.example.net"]
+        );
+        assert_eq!(
+            report.unmatched_remote,
+            vec!["https://untrusted.example.net/x.png"]
+        );
         let codes: Vec<&str> = report.diagnostics.iter().map(|d| d.code.as_str()).collect();
         assert_eq!(codes[0], "next-image-usage-summary");
         assert!(codes.contains(&"next-image-remote-unmatched"));
@@ -1359,7 +1493,12 @@ export default async function HomePage() {
             .find(|d| d.code == "next-image-remote-unmatched")
             .expect("unmatched diagnostic");
         assert_eq!(unmatched.file.as_deref(), Some("app/page.tsx"));
-        assert!(unmatched.hint.as_deref().is_some_and(|h| h.contains("untrusted.example.net")));
+        assert!(
+            unmatched
+                .hint
+                .as_deref()
+                .is_some_and(|h| h.contains("untrusted.example.net"))
+        );
 
         let mut domains = cfg.clone();
         domains.domains = vec![String::from("untrusted.example.net")];
@@ -1374,7 +1513,12 @@ export default async function HomePage() {
             }],
             &cfg,
         );
-        assert!(missing.diagnostics.iter().any(|d| d.code == "next-image-missing-dimensions"));
+        assert!(
+            missing
+                .diagnostics
+                .iter()
+                .any(|d| d.code == "next-image-missing-dimensions")
+        );
     }
 
     #[test]
@@ -1403,13 +1547,17 @@ export default async function HomePage() {
 
     #[test]
     fn fixture_page_when_present() {
-        let path = Path::new(env!("CARGO_MANIFEST_DIR")).join("../../apps/next-fixture/app/page.tsx");
+        let path =
+            Path::new(env!("CARGO_MANIFEST_DIR")).join("../../apps/next-fixture/app/page.tsx");
         let Ok(source) = std::fs::read_to_string(&path) else {
             return;
         };
         let usages = extract_image_usages(&source, "app/page.tsx");
         assert_fixture_usages(&usages);
         let report = image_usage_report(usages, &fixture_config());
-        assert_eq!(report.unmatched_remote, vec!["https://untrusted.example.net/x.png"]);
+        assert_eq!(
+            report.unmatched_remote,
+            vec!["https://untrusted.example.net/x.png"]
+        );
     }
 }

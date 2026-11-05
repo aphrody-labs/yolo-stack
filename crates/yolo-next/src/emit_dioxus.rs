@@ -7,6 +7,7 @@
 //! `#[get]` / `#[post]` server functions for route handlers and Server Actions.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
 
 use crate::metadata;
 use crate::types::{
@@ -476,7 +477,7 @@ fn dioxus_toml(package: &str, title: &str, base_path: &str) -> String {
     );
     let base = base_path.trim_matches('/');
     if !base.is_empty() {
-        out.push_str(&format!("base_path = {}\n", toml_string(base)));
+        let _ = writeln!(out, "base_path = {}", toml_string(base));
     }
     out.push_str("\n[web.watcher]\nindex_on_404 = true\n");
     out
@@ -527,10 +528,11 @@ impl MainGen {
                     let fields = route_fields(page);
                     let route = relative_route(&dioxus_route_for(page, &fields), nest_prefix);
                     let name = self.page_names.get(&page.file).cloned().unwrap_or_default();
-                    out.push_str(&format!(
-                        "{pad}#[route(\"{route}\")]\n{pad}{name} {},\n",
+                    let _ = writeln!(
+                        out,
+                        "{pad}#[route(\"{route}\")]\n{pad}{name} {},",
                         variant_fields(&fields)
-                    ));
+                    );
                 }
                 NestItem::Nest(child) => {
                     let child_prefix = if child.url_prefix.is_empty() {
@@ -547,15 +549,15 @@ impl MainGen {
                         .unwrap_or_default();
                     let mut inner = indent;
                     if nested {
-                        out.push_str(&format!("{pad}#[nest(\"{relative}\")]\n"));
+                        let _ = writeln!(out, "{pad}#[nest(\"{relative}\")]");
                         inner += 4;
                     }
                     let lpad = " ".repeat(inner);
-                    out.push_str(&format!("{lpad}#[layout({layout})]\n"));
+                    let _ = writeln!(out, "{lpad}#[layout({layout})]");
                     self.emit_enum(child, &child_prefix, inner + 4, out);
-                    out.push_str(&format!("{lpad}#[end_layout]\n"));
+                    let _ = writeln!(out, "{lpad}#[end_layout]");
                     if nested {
-                        out.push_str(&format!("{pad}#[end_nest]\n"));
+                        let _ = writeln!(out, "{pad}#[end_nest]");
                     }
                 }
             }
@@ -581,15 +583,16 @@ fn asset_consts(analysis: &ProjectAnalysis) -> String {
                 usage.priority
             )
         };
-        out.push_str(&format!(
-            "/// `{}` from `{}`{}.\nconst ASSET_{index}: Asset = {expr};\n",
+        let _ = writeln!(
+            out,
+            "/// `{}` from `{}`{}.\nconst ASSET_{index}: Asset = {expr};",
             src,
             usage.file,
             usage
                 .alt
                 .as_deref()
                 .map_or(String::new(), |alt| format!(" (alt: {alt})"))
-        ));
+        );
     }
     out
 }
@@ -668,9 +671,10 @@ fn main_rs(
 
     // Nested layouts.
     for (file, name) in &generator.layout_names {
-        out.push_str(&format!(
+        let _ = write!(
+            out,
             "/// Layout `{file}`.\n#[component]\nfn {name}() -> Element {{\n    rsx! {{\n        Outlet::<Route> {{}}\n    }}\n}}\n\n"
-        ));
+        );
     }
 
     // Pages.
@@ -678,13 +682,14 @@ fn main_rs(
         out.push_str(&page_component(&generator, page, root_meta));
     }
 
-    out.push_str(&format!(
-        "/// Fallback route{}.\n#[component]\nfn NotFound(segments: Vec<String>) -> Element {{\n    rsx! {{\n        main {{\n            h1 {{ \"Not found\" }}\n            p {{ \"{{segments:?}}\" }}\n        }}\n    }}\n}}\n",
+    let _ = writeln!(
+        out,
+        "/// Fallback route{}.\n#[component]\nfn NotFound(segments: Vec<String>) -> Element {{\n    rsx! {{\n        main {{\n            h1 {{ \"Not found\" }}\n            p {{ \"{{segments:?}}\" }}\n        }}\n    }}\n}}",
         manifest
             .root_not_found
             .as_deref()
             .map_or(String::new(), |f| format!(" (port `{f}`)"))
-    ));
+    );
     out
 }
 
@@ -705,14 +710,15 @@ fn root_layout_component(
         manifest.root_layout.as_deref().unwrap_or("none")
     );
     if !slots.is_empty() {
-        out.push_str(&format!(
-            "/// Parallel slots to render manually: {}.\n",
+        let _ = writeln!(
+            out,
+            "/// Parallel slots to render manually: {}.",
             slots
                 .iter()
                 .map(|s| format!("`@{s}`"))
                 .collect::<Vec<_>>()
                 .join(", ")
-        ));
+        );
     }
     out.push_str("#[component]\nfn RootLayout() -> Element {\n    rsx! {\n");
     for line in metadata::render_dioxus_head_rsx(root_meta, root_viewport).lines() {
@@ -758,36 +764,42 @@ fn page_component(generator: &MainGen, page: &RouteEntry, root_meta: &Metadata) 
         out.push_str("/// TODO(yolo-next): port `generateMetadata` into a server function feeding `document::Title`.\n");
     }
     if !page.legacy_data_functions.is_empty() {
-        out.push_str(&format!(
-            "/// TODO(yolo-next): port {} into `#[server]` loaders.\n",
+        let _ = writeln!(
+            out,
+            "/// TODO(yolo-next): port {} into `#[server]` loaders.",
             page.legacy_data_functions.join(", ")
-        ));
+        );
     }
-    out.push_str(&format!(
-        "#[component]\nfn {name}({}) -> Element {{\n    rsx! {{\n",
+    let _ = writeln!(
+        out,
+        "#[component]\nfn {name}({}) -> Element {{\n    rsx! {{",
         signature.join(", ")
-    ));
+    );
     if let Some(title) = page_title(root_meta, page) {
-        out.push_str(&format!(
-            "        document::Title {{ \"{}\" }}\n",
+        let _ = writeln!(
+            out,
+            "        document::Title {{ \"{}\" }}",
             rust_string(&title, true)
-        ));
+        );
     }
-    out.push_str(&format!(
-        "        main {{\n            h1 {{ \"{}\" }}\n",
+    let _ = writeln!(
+        out,
+        "        main {{\n            h1 {{ \"{}\" }}",
         rust_string(&page.url_pattern, true)
-    ));
+    );
     for field in &fields {
         if field.catch_all {
-            out.push_str(&format!(
-                "            p {{ \"{}: {{{}:?}}\" }}\n",
+            let _ = writeln!(
+                out,
+                "            p {{ \"{}: {{{}:?}}\" }}",
                 field.param, field.ident
-            ));
+            );
         } else {
-            out.push_str(&format!(
-                "            p {{ \"{}: {{{}}}\" }}\n",
+            let _ = writeln!(
+                out,
+                "            p {{ \"{}: {{{}}}\" }}",
                 field.param, field.ident
-            ));
+            );
         }
     }
     out.push_str("        }\n    }\n}\n\n");
@@ -824,10 +836,11 @@ fn server_fns_rs(analysis: &ProjectAnalysis) -> Option<String> {
                 "PATCH" => "patch",
                 "DELETE" => "delete",
                 _ => {
-                    out.push_str(&format!(
-                        "\n// {method} {} (`{}`): handled by the framework, no server function emitted.\n",
+                    let _ = writeln!(
+                        out,
+                        "\n// {method} {} (`{}`): handled by the framework, no server function emitted.",
                         entry.url_pattern, entry.file
-                    ));
+                    );
                     continue;
                 }
             };
@@ -836,20 +849,26 @@ fn server_fns_rs(analysis: &ProjectAnalysis) -> Option<String> {
             if matches!(attr, "post" | "put" | "patch") {
                 args.push(String::from("body: String"));
             }
-            out.push_str(&format!(
-                "\n/// `{method} {}` from `{}`{}.\n#[{attr}(\"{path}\")]\npub async fn {name}({}) -> Result<String> {{\n    // TODO(yolo-next): port the handler body.\n    Ok(String::new())\n}}\n",
+            let _ = writeln!(
+                out,
+                "\n/// `{method} {}` from `{}`{}.\n#[{attr}(\"{path}\")]\npub async fn {name}({}) -> Result<String> {{\n    // TODO(yolo-next): port the handler body.\n    Ok(String::new())\n}}",
                 entry.url_pattern,
                 entry.file,
-                if entry.legacy_pages { " (Pages Router API route)" } else { "" },
+                if entry.legacy_pages {
+                    " (Pages Router API route)"
+                } else {
+                    ""
+                },
                 args.join(", ")
-            ));
+            );
         }
     }
     for (name, module, export) in actions {
-        out.push_str(&format!(
-            "\n/// Server Action `{export}` from `{module}`.\n#[post(\"/_actions/{}\")]\npub async fn {name}(input: String) -> Result<String> {{\n    // TODO(yolo-next): port the action body (receives the serialized form data).\n    Ok(input)\n}}\n",
+        let _ = writeln!(
+            out,
+            "\n/// Server Action `{export}` from `{module}`.\n#[post(\"/_actions/{}\")]\npub async fn {name}(input: String) -> Result<String> {{\n    // TODO(yolo-next): port the action body (receives the serialized form data).\n    Ok(input)\n}}",
             rust_string(&export, false)
-        ));
+        );
     }
     Some(out)
 }
@@ -874,8 +893,7 @@ mod tests {
         files
             .iter()
             .find(|f| f.path == path)
-            .map(|f| f.contents.as_str())
-            .unwrap_or_else(|| panic!("{path} missing"))
+            .map_or_else(|| panic!("{path} missing"), |f| f.contents.as_str())
     }
 
     #[test]

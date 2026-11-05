@@ -1,0 +1,73 @@
+{
+  "tool": "scripts/yolo-next-verify.ts",
+  "date": "2026-11-05T04:54:25.594Z",
+  "host": {
+    "platform": "win32",
+    "arch": "x64",
+    "bun": "1.4.4"
+  },
+  "versions": {
+    "cargo": "cargo 1.99.1 (5f94df478 2026-08-27)",
+    "rustc": "rustc 1.99.1 (58cf8f9c3 2026-10-13)"
+  },
+  "fixture": "C:\\src\\yolo-stack\\apps\\next-fixture",
+  "ok": true,
+  "steps": [
+    {
+      "name": "cargo fmt --check (yolo-next)",
+      "command": "cargo fmt -p yolo-next --check",
+      "cwd": "C:\\src\\yolo-stack",
+      "exitCode": 0,
+      "durationMs": 320,
+      "tail": ""
+    },
+    {
+      "name": "cargo clippy -D warnings (yolo-next)",
+      "command": "cargo clippy -p yolo-next --all-targets -- -D warnings",
+      "cwd": "C:\\src\\yolo-stack",
+      "exitCode": 0,
+      "durationMs": 17168,
+      "tail": "Checking yolo-next v0.1.0 (C:\\src\\yolo-stack\\crates\\yolo-next)\n    Finished `dev` profile [unoptimized + debuginfo] target(s) in 17.05s"
+    },
+    {
+      "name": "cargo test (yolo-next)",
+      "command": "cargo test -p yolo-next",
+      "cwd": "C:\\src\\yolo-stack",
+      "exitCode": 0,
+      "durationMs": 45335,
+      "tail": "test routes::tests::manifest_json_shapes ... ok\ntest routes::tests::scans_synthetic_fixture ... ok\ntest routes::tests::route_page_conflict_is_reported ... ok\ntest emit_dioxus::tests::emits_dioxus_project_from_fixture ... ok\ntest emit_leptos::tests::emits_leptos_project_from_fixture ... ok\ntest emit_bun::tests::emits_bun_project_from_fixture ... ok\n\ntest result: ok. 120 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.58s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\nrunning 0 tests\n\ntest result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s\n\n\n   Compiling yolo-next v0.1.0 (C:\\src\\yolo-stack\\crates\\yolo-next)\n    Finished `test` profile [unoptimized + debuginfo] target(s) in 40.72s\n     Running unittests src\\lib.rs (target/slice-a\\debug\\deps\\yolo_next-c77ff790b5a828b3.exe)\n     Running unittests src\\main.rs (target/slice-a\\debug\\deps\\yolo_next-bb854ccc1c590d09.exe)\n   Doc-tests yolo_next"
+    },
+    {
+      "name": "yolo-next analyze fixture",
+      "command": "cargo run -q -p yolo-next -- analyze C:\\src\\yolo-stack\\apps\\next-fixture",
+      "cwd": "C:\\src\\yolo-stack",
+      "exitCode": 0,
+      "durationMs": 5656,
+      "tail": "project      next-fixture\nnext         16.4.5\nconfig       next.config.ts\npages        13\nhandlers     3\nmetadata     4\nfonts        3\nimages       4\nclient refs  12\nserver refs  5\ndiagnostics  4\n  [Warning] next-config-removed-key: `eslint` was removed in Next.js 16 and is ignored\n  [Info] next-image-usage-summary: 4 <Image> usages: 2 remote across 2 hosts, 1 static imports, 1 unmatched remote\n  [Warning] next-image-remote-unmatched: remote image `https://untrusted.example.net/x.png` matches no `images.remotePatterns` entry\n  [Info] next-image-priority-deprecated: `app/page.tsx` sets `priority`/`preload` on <Image>; Next.js 16 names the prop `preload` and emits a `<link rel=preload>`"
+    },
+    {
+      "name": "bun test (@yolo-rs/next)",
+      "command": "bun test",
+      "cwd": "C:\\src\\yolo-stack\\packages\\yolo-next",
+      "exitCode": 0,
+      "durationMs": 4811,
+      "tail": "Check the top-level render call using <article>. See https://react.dev/link/warning-keys for more information.\nEach child in a list should have a unique \"key\" prop.\n\nCheck the top-level render call using <article>. See https://react.dev/link/warning-keys for more information.\nEach child in a list should have a unique \"key\" prop.\n\nCheck the top-level render call using <main>. See https://react.dev/link/warning-keys for more information.\n[yolo-next] render failed for /broken: 1 | export default function Broken() { throw new Error(\"render exploded\"); }\n                                                 ^\nerror: render exploded\n      at Broken (C:\\src\\yolo-stack\\packages\\yolo-next\\tests\\.tmp-server-17600\\app\\broken\\page.tsx:1:46)\n      at serializeNode (C:\\src\\yolo-stack\\packages\\yolo-next\\src\\rsc.ts:681:16)\n      at serializeNode (C:\\src\\yolo-stack\\packages\\yolo-next\\src\\rsc.ts:597:24)\n      at async serializeNode (C:\\src\\yolo-stack\\packages\\yolo-next\\src\\rsc.ts:628:30)\n      at async serializeNode (C:\\src\\yolo-stack\\packages\\yolo-next\\src\\rsc.ts:597:24)\n      at async serializeProps (C:\\src\\yolo-stack\\packages\\yolo-next\\src\\rsc.ts:575:22)\n      at async serializeNode (C:\\src\\yolo-stack\\packages\\yolo-next\\src\\rsc.ts:616:41)\n      at async serializeProps (C:\\src\\yolo-stack\\packages\\yolo-next\\src\\rsc.ts:575:22)\n      at async serializeNode (C:\\src\\yolo-stack\\packages\\yolo-next\\src\\rsc.ts:616:41)\n\n\n 262 pass\n 0 fail\n 1833 expect() calls\nRan 262 tests across 22 files. [4.77s]"
+    },
+    {
+      "name": "bun check (@yolo-rs/next)",
+      "command": "bun check",
+      "cwd": "C:\\src\\yolo-stack\\packages\\yolo-next",
+      "exitCode": 0,
+      "durationMs": 324,
+      "tail": "$ bun check\n✓ No type errors in 69 files [134.96ms]"
+    },
+    {
+      "name": "bun run typecheck (root tsc)",
+      "command": "bun run typecheck",
+      "cwd": "C:\\src\\yolo-stack",
+      "exitCode": 0,
+      "durationMs": 5482,
+      "tail": "$ bun x tsc --noEmit -p tsconfig.json"
+    }
+  ]
+}

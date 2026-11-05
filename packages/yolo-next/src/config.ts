@@ -337,7 +337,7 @@ function isResolved(config: YoloConfigInput | ResolvedYoloConfig): config is Res
  * diagnostics, CDN plan, images policy, bundler plan. Function-valued `redirects`/`rewrites`/`headers`
  * stay on `.next` for `resolveYoloConfig` to await.
  */
-export function defineYoloConfig(config: YoloConfigInput): ResolvedYoloConfig {
+export function defineYoloConfig(config: YoloConfigInput | ResolvedYoloConfig): ResolvedYoloConfig {
   if (isResolved(config)) return config;
   const input = config as unknown as Record<string, unknown>;
   const rest: Record<string, unknown> = {};
@@ -550,7 +550,8 @@ function literal(value: unknown, indent: string): string {
 export function serializeYoloConfig(config: ResolvedYoloConfig, options: { root?: string } = {}): string {
   const next: Record<string, unknown> = { ...(config.next as Record<string, unknown>) };
   for (const key of ["redirects", "rewrites", "headers", "webpack", "generateBuildId", "exportPathMap", "eslint", "amp", "serverRuntimeConfig", "publicRuntimeConfig"]) delete next[key];
-  if (isObject(next.turbopack) && typeof next.turbopack.root === "string" && options.root && resolve(next.turbopack.root) === resolve(options.root)) {
+  // `turbopack.root` is an absolute, machine-specific path (`process.cwd()`); the project root is implied.
+  if (isObject(next.turbopack) && typeof next.turbopack.root === "string" && (isAbsolute(next.turbopack.root) || (options.root && resolve(next.turbopack.root) === resolve(options.root)))) {
     next.turbopack = { ...next.turbopack };
     delete (next.turbopack as Record<string, unknown>).root;
   }

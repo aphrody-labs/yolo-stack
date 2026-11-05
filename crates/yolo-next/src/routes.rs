@@ -12,6 +12,7 @@
 //!   `unauthorized`, `default` and `route` special files plus the metadata file conventions.
 
 use std::collections::{BTreeMap, BTreeSet};
+use std::fmt::Write as _;
 use std::fs;
 use std::path::Path;
 
@@ -47,9 +48,7 @@ fn norm(path: &Path) -> String {
 
 /// Path of `path` relative to `root` with `/` separators.
 fn rel_path(root: &Path, path: &Path) -> String {
-    path.strip_prefix(root)
-        .map(norm)
-        .unwrap_or_else(|_| norm(path))
+    path.strip_prefix(root).map_or_else(|_| norm(path), norm)
 }
 
 // ============================================================================
@@ -1069,17 +1068,17 @@ fn route_regex(url_pattern: &str) -> (String, String, Map<String, Value>) {
         match kind {
             SegmentKind::Dynamic => {
                 regex.push_str("/([^/]+?)");
-                named.push_str(&format!("/(?<{key}>[^/]+?)"));
+                let _ = write!(named, "/(?<{key}>[^/]+?)");
                 keys.insert(key, Value::String(param));
             }
             SegmentKind::CatchAll => {
                 regex.push_str("/(.+?)");
-                named.push_str(&format!("/(?<{key}>.+?)"));
+                let _ = write!(named, "/(?<{key}>.+?)");
                 keys.insert(key, Value::String(param));
             }
             SegmentKind::OptionalCatchAll => {
                 regex.push_str("(?:/(.+?))?");
-                named.push_str(&format!("(?:/(?<{key}>.+?))?"));
+                let _ = write!(named, "(?:/(?<{key}>.+?))?");
                 keys.insert(key, Value::String(param));
             }
             _ => {
@@ -1614,7 +1613,7 @@ mod tests {
         assert_eq!(blog.loading.as_deref(), Some("app/blog/[slug]/loading.tsx"));
         assert_eq!(blog.error.as_deref(), Some("app/error.tsx"));
         assert_eq!(blog.not_found.as_deref(), Some("app/not-found.tsx"));
-        assert!(blog.parallel_slots.is_empty());
+        assert_eq!(blog.parallel_slots, Vec::<String>::new());
         assert_eq!(blog.params.len(), 1);
         assert_eq!(blog.params[0].name, "slug");
         assert!(blog.segment_config.has_generate_static_params);

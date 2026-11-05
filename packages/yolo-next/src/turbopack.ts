@@ -229,8 +229,9 @@ export function aliasPlugin(aliases: Record<string, string>, browserAliases: Rec
       if (names.length === 0) return;
       const wildcard = names.filter((n) => n.endsWith("/*")).map((n) => n.slice(0, -2));
       const exact = names.filter((n) => !n.endsWith("/*"));
-      const alternatives = [...exact.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")), ...wildcard.map((n) => `${n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\/`)];
-      const filter = new RegExp(`^(?:${alternatives.join("|")})(?:/.*)?$`);
+      const escape = (text: string): string => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const alternatives = [...exact.map((n) => `${escape(n)}(?:/.*)?`), ...wildcard.map((n) => `${escape(n)}/.+`)];
+      const filter = new RegExp(`^(?:${alternatives.join("|")})$`);
       build.onResolve({ filter }, (args) => {
         const isBrowser = build.config.target === "browser";
         const table = isBrowser ? { ...aliases, ...browserAliases } : aliases;

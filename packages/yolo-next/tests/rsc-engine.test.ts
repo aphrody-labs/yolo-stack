@@ -1,63 +1,101 @@
 // SPDX-License-Identifier: Apache-2.0
 import { afterAll, beforeAll, describe, expect, test } from "bun:test";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdirSync, rmSync, writeFileSync } from "node:fs";
+import { defineYoloConfig } from "../src/config.ts";
+import { scanAppDir } from "../src/router.ts";
+import {
+  FULLSTACK_CANDIDATES,
+  createWorkerEngine,
+  forcedRscEngine,
+  reactServerDomWebpackAvailable,
+  resolveRscEngine,
+} from "../src/rsc-engine.ts";
 
-import { FULLSTACK_CANDIDATES, adaptFullstackModule, createInlineEngine, resolveRscEngine } from "../src/rsc-engine.ts";
-import { removeDir, scratchDir } from "./helpers.ts";
-
-let root: string;
+const root = `${import.meta.dir}/.tmp-engine-${process.pid}`;
 
 beforeAll(() => {
-  root = scratchDir("engine");
-  mkdirSync(join(root, "app"), { recursive: true });
-  writeFileSync(join(root, "app", "layout.tsx"), 'export const metadata = { title: "Engine" };\nexport default function L({ children }: { children: React.ReactNode }) { return <html lang="en"><body>{children}</body></html>; }');
-  writeFileSync(join(root, "app", "page.tsx"), "export default function P() { return <main><h1>inline page</h1></main>; }");
+  mkdirSync(`${root}/app/blog/[slug]`, { recursive: true });
+  writeFileSync(`${root}/app/layout.tsx`, 'export default function Layout({ children }: { children: React.ReactNode }) { return <html lang="en"><body><nav>engine-nav</nav>{children}</body></html>; }\n');
+  writeFileSync(`${root}/app/page.tsx`, "export default function Home() { return <main>engine-home</main>; }\n");
+  writeFileSync(`${root}/app/blog/[slug]/page.tsx`, 'export default async function Post({ params }: { params: Promise<{ slug: string }> }) { const { slug } = await params; return <article>{slug}</article>; }\n');
 });
 
-afterAll(() => {
-  if (root) removeDir(root);
+afterAll(async () => {
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    try {
+      rmSync(root, { recursive: true, force: true });
+      return;
+    } catch {
+      await Bun.sleep(100);
+    }
+  }
 });
 
-const text = async (stream: ReadableStream<Uint8Array>): Promise<string> => new Response(stream).text();
+const config = defineYoloConfig({});
 
 describe("resolveRscEngine", () => {
-  test("falls back to inline when no engine is available", async () => {
+  test("forcedRscEngine reads env and experimental.rscEngine", () => {
+    expect(forcedRscEngine(undefined, {})).toBeUndefined();
+    expect(forcedRscEngine(undefined, { YOLO_RSC_ENGINE: "inline" })).toBe("inline");
+    expect(forcedRscEngine(undefined, { YOLO_RSC_ENGINE: "worker" })).toBe("webpack-worker");
+    expect(forcedRscEngine(defineYoloConfig({ experimental: { rscEngine: "fullstack" } }), {})).toBe("fullstack");
+    expect(forcedRscEngine(undefined, { YOLO_RSC_ENGINE: "bogus" })).toBeUndefined();
+  });
+
+  test("prefer: inline always yields the inline engine", async () => {
+    const engine = await resolveRscEngine({ root, config, prefer: "inline", log: () => undefined });
+    expect(engine.name).toBe("inline");
+    const html = await new Response(await engine.renderHtml({ request: new Request("http://localhost/") })).text();
+    expect(html).toContain("<main>engine-home</main>");
+    expect(html).toContain("<nav>engine-nav</nav>");
+  });
+
+  test("without fullstack candidates or bundles the resolver falls back", async () => {
     const logs: string[] = [];
-    const engine = await resolveRscEngine({ root, candidates: [join(root, "nope"), "/definitely/not/here"], packageResolve: false, bundles: false, log: (m) => logs.push(m) });
+    const engine = await resolveRscEngine({ root, config, candidates: [], packageResolve: false, bundles: false, log: (m) => logs.push(m) });
     expect(engine.name).toBe("inline");
-    expect(logs).toContain("rsc engine: inline");
-    const html = await text(await engine.renderHtml({ request: new Request("http://localhost/") }));
-    expect(html).toContain("<title>Engine</title>");
-    expect(html).toContain("<h1>inline page</h1>");
-    const flight = await text(await engine.renderFlight({ request: new Request("http://localhost/") }));
-    expect(flight.startsWith('0:["$","div",null,')).toBe(true);
-    expect(flight).toContain("inline page");
-    const missing = await text(await engine.renderHtml({ request: new Request("http://localhost/nope") }));
-    expect(missing).toContain("404");
-  }, 30_000);
-
-  test("prefer inline short-circuits", async () => {
-    const engine = await resolveRscEngine({ root, prefer: "inline" });
-    expect(engine.name).toBe("inline");
-    expect(createInlineEngine({ root }).name).toBe("inline");
-    expect(FULLSTACK_CANDIDATES(root)[0]?.replace(/\\/g, "/")).toBe(`${root.replace(/\\/g, "/")}/node_modules/@yolo-rs/fullstack`);
+    expect(logs.at(-1)).toBe("rsc engine: inline");
+    const forced = await resolveRscEngine({ root, config, candidates: [], packageResolve: false, prefer: "fullstack", log: () => undefined });
+    expect(forced.name).toBe("inline");
   });
 
-  test("picks a fullstack candidate directory exposing loadApp", async () => {
-    const candidate = join(root, "fake-fullstack");
-    mkdirSync(join(candidate, "src", "app"), { recursive: true });
-    writeFileSync(join(candidate, "src", "app", "index.ts"), 'export async function loadApp(outDir: string) { return { fetch: async (request: Request) => new Response(request.headers.get("rsc") ? "0:flight\\n" : "<html>fake " + outDir.length + "</html>") }; }\n');
-    const engine = await resolveRscEngine({ root, candidates: [candidate], packageResolve: false, bundles: false, fullstackOutDir: join(root, "fs-out") });
-    expect(engine.name).toBe("fullstack");
-    expect(engine.details.source?.replace(/\\/g, "/")).toBe(join(candidate, "src", "app", "index.ts").replace(/\\/g, "/"));
-    expect(await text(await engine.renderFlight({ request: new Request("http://localhost/") }))).toBe("0:flight\n");
-    expect(await text(await engine.renderHtml({ request: new Request("http://localhost/") }))).toContain("<html>fake");
+  test("FULLSTACK_CANDIDATES lists node_modules first and the yolo-ui reference tree", () => {
+    const candidates = FULLSTACK_CANDIDATES("C:/proj");
+    expect(candidates[0]).toContain("node_modules");
+    expect(candidates.some((c) => c.endsWith("yolo-ui/packages/yolo-fullstack"))).toBe(true);
   });
+
+  test("webpack-worker engine renders through the react-server worker when react-server-dom-webpack resolves", async () => {
+    expect(reactServerDomWebpackAvailable(root)).toBe(true);
+    const manifest = scanAppDir(root);
+    const engine = createWorkerEngine({ root, config, manifest, dev: false, log: () => undefined });
+    expect(engine?.name).toBe("webpack-worker");
+    expect(engine?.details.mode).toBe("worker");
+    if (!engine) {
+      return;
+    }
+    try {
+      const flight = await new Response(await engine.renderFlight({ request: new Request("http://localhost/blog/worker") })).text();
+      expect(flight).toContain('["$","article",null,{"children":"worker"}');
+      const html = await new Response(await engine.renderHtml({ request: new Request("http://localhost/blog/worker"), metadata: { title: "Worker" } })).text();
+      expect(html).toContain("<article>worker</article>");
+      expect(html).toContain("<nav>engine-nav</nav>");
+      expect(html).toContain("<title>Worker</title>");
+      expect(html).toContain("__next_f");
+      const selected = await resolveRscEngine({ root, config, manifest, candidates: [], packageResolve: false, prefer: "webpack-worker", log: () => undefined });
+      expect(selected.name).toBe("webpack-worker");
+    } finally {
+      const html = await new Response(await engine.renderHtml({ request: new Request("http://localhost/nope") })).text();
+      expect(html).toContain("404");
+    }
+  }, 40_000);
 });
 
 describe("adaptFullstackModule", () => {
-  test("wraps a fake engine module", async () => {
+  const text = (stream: ReadableStream<Uint8Array>): Promise<string> => new Response(stream).text();
+
+  test("wraps a fake fullstack module: Flight via the rsc header, actions via yolo-action, lazy build", async () => {
+    const { adaptFullstackModule } = await import("../src/rsc-engine.ts");
     const seen: Array<{ url: string; rsc: string | null; action: string | null }> = [];
     let built = 0;
     const fake = {
@@ -67,12 +105,14 @@ describe("adaptFullstackModule", () => {
       loadApp: async () => ({
         fetch: async (request: Request) => {
           seen.push({ url: request.url, rsc: request.headers.get("rsc"), action: request.headers.get("yolo-action") });
-          return new Response(request.headers.get("rsc") ? "0:payload\n" : "<!doctype html><p>page</p>", { headers: { "content-type": request.headers.get("rsc") ? "text/x-component" : "text/html" } });
+          const flight = request.headers.get("rsc") === "1";
+          return new Response(flight ? "0:payload\n" : "<!doctype html><p>page</p>", { headers: { "content-type": flight ? "text/x-component" : "text/html" } });
         },
       }),
     };
-    const engine = adaptFullstackModule(fake, { root, outDir: join(root, "fs-out") });
+    const engine = adaptFullstackModule(fake, { root, outDir: `${root}/fs-out` });
     expect(engine?.name).toBe("fullstack");
+    expect(built).toBe(0);
     expect(await text(await engine!.renderFlight({ request: new Request("http://localhost/a") }))).toBe("0:payload\n");
     expect(await text(await engine!.renderHtml({ request: new Request("http://localhost/b") }))).toBe("<!doctype html><p>page</p>");
     const action = await engine!.handleAction!(new Request("http://localhost/c", { method: "POST", headers: { "next-action": "00abc" } }), {});
@@ -86,10 +126,28 @@ describe("adaptFullstackModule", () => {
     expect(adaptFullstackModule(null, { root })).toBeUndefined();
   });
 
-  test("render failures fall back to the inline engine", async () => {
-    const broken = { loadApp: async () => { throw new Error("no build"); } };
-    const engine = adaptFullstackModule(broken, { root, outDir: join(root, "fs-broken") });
+  test("resolveRscEngine picks a candidate directory exposing loadApp", async () => {
+    const candidate = `${root}/fake-fullstack`;
+    mkdirSync(`${candidate}/src/app`, { recursive: true });
+    writeFileSync(`${candidate}/src/app/index.ts`, 'export async function loadApp(outDir: string) { return { fetch: async (request: Request) => new Response(request.headers.get("rsc") ? "0:flight\\n" : "<html>fake " + outDir.length + "</html>") }; }\n');
+    const engine = await resolveRscEngine({ root, config, candidates: [candidate], packageResolve: false, bundles: false, fullstackOutDir: `${root}/fs-candidate`, log: () => undefined });
+    expect(engine.name).toBe("fullstack");
+    expect(engine.details.source?.replace(/\\/g, "/")).toBe(`${candidate}/src/app/index.ts`.replace(/\\/g, "/"));
+    expect(await text(await engine.renderFlight({ request: new Request("http://localhost/") }))).toBe("0:flight\n");
+    expect(await text(await engine.renderHtml({ request: new Request("http://localhost/") }))).toContain("<html>fake");
+  });
+
+  test("render failures of the fullstack handler fall back to the inline engine", async () => {
+    const { adaptFullstackModule } = await import("../src/rsc-engine.ts");
+    const broken = {
+      loadApp: async () => {
+        throw new Error("no build");
+      },
+    };
+    const logs: string[] = [];
+    const engine = adaptFullstackModule(broken, { root, outDir: `${root}/fs-broken`, log: (m) => logs.push(m) });
     const html = await text(await engine!.renderHtml({ request: new Request("http://localhost/") }));
-    expect(html).toContain("<h1>inline page</h1>");
+    expect(html).toContain("<main>engine-home</main>");
+    expect(logs.some((m) => m.includes("falling back to inline"))).toBe(true);
   }, 30_000);
 });

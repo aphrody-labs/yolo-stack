@@ -130,10 +130,12 @@ describe("ReadonlyURLSearchParams", () => {
     expect(params.get("q")).toBe("1");
     expect(params.getAll("tag")).toEqual(["a", "b"]);
     expect(params instanceof URLSearchParams).toBe(true);
-    expect(() => params.append("x", "1")).toThrow(/Method unavailable on `ReadonlyURLSearchParams`/);
-    expect(() => params.set("x", "1")).toThrow(/Method unavailable/);
-    expect(() => params.delete("q")).toThrow(/Method unavailable/);
-    expect(() => params.sort()).toThrow(/Method unavailable/);
+    // The overrides take no parameters on purpose (Next's type-level guard), so call through the base type.
+    const mutable = params as URLSearchParams;
+    expect(() => mutable.append("x", "1")).toThrow(/Method unavailable on `ReadonlyURLSearchParams`/);
+    expect(() => mutable.set("x", "1")).toThrow(/Method unavailable/);
+    expect(() => mutable.delete("q")).toThrow(/Method unavailable/);
+    expect(() => mutable.sort()).toThrow(/Method unavailable/);
   });
 });
 

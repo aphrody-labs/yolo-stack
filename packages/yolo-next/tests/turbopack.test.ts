@@ -59,7 +59,7 @@ describe("translateTurbopack", () => {
     });
     expect(plan.plugins.map((p) => p.kind)).toEqual(["unsupported", "loader-override", "markdown", "loader-override"]);
     expect(plan.plugins[1]?.loader).toBe("file");
-    expect(plan.plugins[2]?.options.providerImportSource).toBe("@mdx-js/react");
+    expect(plan.plugins[2]?.options?.providerImportSource).toBe("@mdx-js/react");
     expect(plan.plugins[3]?.loader).toBe("jsonc");
     expect(plan.emptyModules).toEqual(["canvas", "node:fs"]);
     expect(plan.aliases).toEqual({ lodash: "lodash-es" });

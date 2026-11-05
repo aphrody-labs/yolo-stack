@@ -583,6 +583,8 @@ fn og_title(value: &Value) -> Option<String> {
         .or_else(|| field_str(value, "default"))
 }
 
+// Table of Open Graph properties in `generate/opengraph.tsx` order.
+#[allow(clippy::too_many_lines)]
 fn push_open_graph(head: &mut Head, og: &Value) {
     if let Some(title) = field(og, "title").and_then(og_title) {
         head.property("og:title", title);

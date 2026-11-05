@@ -210,15 +210,15 @@ export class ResponseCookies implements Iterable<[string, ResponseCookie]> {
 
 /** Frozen `Headers` view returned by `headers()`; mutators throw like in Next.js. */
 export class ReadonlyHeaders extends Headers {
-  override set(): never {
+  override set(_name: string, _value: string): never {
     throw new Error("Headers cannot be modified. Read more: https://nextjs.org/docs/app/api-reference/functions/headers");
   }
 
-  override append(): never {
+  override append(_name: string, _value: string): never {
     throw new Error("Headers cannot be modified. Read more: https://nextjs.org/docs/app/api-reference/functions/headers");
   }
 
-  override delete(): never {
+  override delete(_name: string): never {
     throw new Error("Headers cannot be modified. Read more: https://nextjs.org/docs/app/api-reference/functions/headers");
   }
 }

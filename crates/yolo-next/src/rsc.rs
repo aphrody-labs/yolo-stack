@@ -62,7 +62,11 @@ pub(crate) fn template_text(tpl: &TemplateLiteral<'_>, placeholder: &str) -> Str
         if i > 0 {
             out.push_str(placeholder);
         }
-        match quasi.value.cooked.and_then(|c| c.as_str()) {
+        let cooked = match quasi.value.cooked {
+            Some(text) => text.as_str(),
+            None => None,
+        };
+        match cooked {
             Some(cooked) => out.push_str(cooked),
             None => out.push_str(quasi.value.raw.as_str()),
         }
@@ -203,7 +207,10 @@ pub(crate) fn static_json(expr: &Expression<'_>) -> Option<Value> {
     match expr {
         Expression::NullLiteral(_) => Some(Value::Null),
         Expression::ArrayExpression(_) => Some(Value::Array(
-            array_items(expr)?.into_iter().filter_map(static_json).collect(),
+            array_items(expr)?
+                .into_iter()
+                .filter_map(static_json)
+                .collect(),
         )),
         Expression::ObjectExpression(_) => {
             let mut map = Map::new();
@@ -340,7 +347,11 @@ fn walk_stmt<V: Visit>(stmt: &Statement<'_>, v: &mut V) {
         Statement::ExportDeclaration(e) => walk_declaration(&e.declaration, v),
         Statement::ExportDefaultDeclaration(e) => match &e.declaration {
             ExportDefaultDeclarationKind::FunctionDeclaration(f) => {
-                walk_function(f, v, Some("default"));
+                // References name the export, so a default export is always `default`.
+                if let Some(body) = &f.body {
+                    v.func(body, f.r#async, Some("default"));
+                    walk_stmts(&body.statements, v);
+                }
             }
             ExportDefaultDeclarationKind::ClassDeclaration(c) => walk_class(c, v),
             other => {
@@ -676,11 +687,7 @@ fn is_app_entry(id: &str) -> bool {
 
 fn is_hook_name(name: &str) -> bool {
     name == "use"
-        || (name.starts_with("use")
-            && name
-                .chars()
-                .nth(3)
-                .is_some_and(|c| c.is_ascii_uppercase()))
+        || (name.starts_with("use") && name.chars().nth(3).is_some_and(|c| c.is_ascii_uppercase()))
 }
 
 fn is_next_import(spec: &str) -> bool {
@@ -855,15 +862,14 @@ impl Visit for ModuleScan<'_> {
                     if is_hook_name(name) {
                         push_unique(&mut self.hooks, name);
                     }
-                    if name == "require" {
-                        if let Some(spec) = call
+                    if name == "require"
+                        && let Some(spec) = call
                             .arguments
                             .first()
                             .and_then(Argument::as_expression)
                             .and_then(static_string)
-                        {
-                            push_unique(&mut self.dynamic_imports, &spec);
-                        }
+                    {
+                        push_unique(&mut self.dynamic_imports, &spec);
                     }
                 }
             }
@@ -912,7 +918,9 @@ impl Visit for ModuleScan<'_> {
                             format!("`\"use cache\"` function `{name}` must be an async function"),
                         )
                         .with_file(self.file)
-                        .with_hint("cached functions are awaited by the cache handler; declare it `async`"),
+                        .with_hint(
+                            "cached functions are awaited by the cache handler; declare it `async`",
+                        ),
                     );
                 }
                 let mut calls = CacheCalls::default();
@@ -955,10 +963,7 @@ pub fn analyze_module(source: &str, id: &str) -> ModuleInfo {
     let parsed = Parser::new(&allocator, source, source_type_for(id)).parse();
     let program = &parsed.program;
 
-    let mut info = ModuleInfo {
-        id: id.to_owned(),
-        ..ModuleInfo::default()
-    };
+    let mut info = ModuleInfo { id: id.to_owned(), ..ModuleInfo::default() };
     if !parsed.diagnostics.is_empty() {
         let first = parsed
             .diagnostics
@@ -994,11 +999,11 @@ pub fn analyze_module(source: &str, id: &str) -> ModuleInfo {
     }
     info.hooks = scan.hooks;
     let ext = file_extension(id);
-    if ext == "tsx" || ext == "jsx" {
-        if let Ok(analysis) = yolo_react::analyze_react_component(source) {
-            for hook in analysis.hooks_used {
-                push_unique(&mut info.hooks, &hook);
-            }
+    if (ext == "tsx" || ext == "jsx")
+        && let Ok(analysis) = yolo_react::analyze_react_component(source)
+    {
+        for hook in analysis.hooks_used {
+            push_unique(&mut info.hooks, &hook);
         }
     }
     info.next_imports = info
@@ -1098,10 +1103,15 @@ pub fn boundary_violations(module: &ModuleInfo) -> Vec<Diagnostic> {
             out.push(
                 Diagnostic::error(
                     "navigation-hooks-in-server-component",
-                    format!("Server Component `{file}` calls `next/navigation` hooks: {}", navigation.join(", ")),
+                    format!(
+                        "Server Component `{file}` calls `next/navigation` hooks: {}",
+                        navigation.join(", ")
+                    ),
                 )
                 .with_file(file)
-                .with_hint("read `params` / `searchParams` props on the server or add `\"use client\"`"),
+                .with_hint(
+                    "read `params` / `searchParams` props on the server or add `\"use client\"`",
+                ),
             );
         }
     }
@@ -1140,17 +1150,15 @@ fn normalize_relative(path: &str) -> String {
 
 /// Resolves a relative or `@/` / `~/` import specifier to a known module id.
 fn resolve_import(from: &str, spec: &str, ids: &BTreeSet<String>) -> Option<String> {
-    let bases: Vec<String> = if let Some(rest) = spec
-        .strip_prefix("@/")
-        .or_else(|| spec.strip_prefix("~/"))
-    {
-        vec![rest.to_owned(), format!("src/{rest}")]
-    } else if spec.starts_with("./") || spec.starts_with("../") {
-        let dir = from.rsplit_once('/').map_or("", |(dir, _)| dir);
-        vec![normalize_relative(&format!("{dir}/{spec}"))]
-    } else {
-        return None;
-    };
+    let bases: Vec<String> =
+        if let Some(rest) = spec.strip_prefix("@/").or_else(|| spec.strip_prefix("~/")) {
+            vec![rest.to_owned(), format!("src/{rest}")]
+        } else if spec.starts_with("./") || spec.starts_with("../") {
+            let dir = from.rsplit_once('/').map_or("", |(dir, _)| dir);
+            vec![normalize_relative(&format!("{dir}/{spec}"))]
+        } else {
+            return None;
+        };
     for base in bases {
         if ids.contains(&base) {
             return Some(base);
@@ -1170,9 +1178,7 @@ fn resolve_import(from: &str, spec: &str, ids: &BTreeSet<String>) -> Option<Stri
 }
 
 fn chunk_name(module: &str) -> String {
-    let stem = module
-        .rsplit_once('.')
-        .map_or(module, |(stem, _)| stem);
+    let stem = module.rsplit_once('.').map_or(module, |(stem, _)| stem);
     let sanitized: String = stem
         .chars()
         .map(|c| if c.is_ascii_alphanumeric() { c } else { '_' })
@@ -1190,19 +1196,8 @@ fn is_declaration_file(name: &str) -> bool {
     lower.get(lower.len().saturating_sub(5)..) == Some(".d.ts")
 }
 
-/// Scans `dirs` (relative to `root`) for `.ts/.tsx/.js/.jsx/.mjs` modules and builds the graph.
-///
-/// `node_modules` and `.d.ts` files are skipped. Client references are emitted for every export
-/// of a `"use client"` module (plus a `*` namespace entry); server references cover the exports
-/// of `"use server"` modules, hoisted inline actions and `"use cache"` functions. Hook violations
-/// are suppressed for modules that are imported exclusively by Client modules (they become client
-/// code at bundle time) unless they are App Router special files.
-pub fn scan_module_graph(root: &Path, dirs: &[&str]) -> ModuleGraph {
-    let mut graph = ModuleGraph {
-        root: norm(root),
-        ..ModuleGraph::default()
-    };
-
+/// Module sources under `dirs`, sorted by project-relative id (`node_modules` and `.d.ts` skipped).
+fn collect_sources(root: &Path, dirs: &[&str]) -> Vec<(String, String)> {
     let mut sources: Vec<(String, String)> = Vec::new();
     for dir in dirs {
         let base = root.join(dir);
@@ -1212,7 +1207,10 @@ pub fn scan_module_graph(root: &Path, dirs: &[&str]) -> ModuleGraph {
         let walker = walkdir::WalkDir::new(&base)
             .into_iter()
             .filter_entry(|e| e.file_name() != "node_modules");
-        for entry in walker.filter_map(Result::ok).filter(|e| e.file_type().is_file()) {
+        for entry in walker
+            .filter_map(Result::ok)
+            .filter(|e| e.file_type().is_file())
+        {
             let path = entry.path();
             let name = path.file_name().and_then(|n| n.to_str()).unwrap_or("");
             if is_declaration_file(name) {
@@ -1230,12 +1228,11 @@ pub fn scan_module_graph(root: &Path, dirs: &[&str]) -> ModuleGraph {
     }
     sources.sort_by(|a, b| a.0.cmp(&b.0));
     sources.dedup_by(|a, b| a.0 == b.0);
+    sources
+}
 
-    let modules: Vec<ModuleInfo> = sources
-        .iter()
-        .map(|(id, source)| analyze_module(source, id))
-        .collect();
-
+/// Per-module diagnostics plus boundary violations, minus hook violations of client leaves.
+fn graph_diagnostics(modules: &[ModuleInfo]) -> Vec<Diagnostic> {
     // Import graph (relative + `@/` specifiers only) for the client-leaf refinement.
     let ids: BTreeSet<String> = modules.iter().map(|m| m.id.clone()).collect();
     let mut importers: BTreeMap<String, Vec<usize>> = BTreeMap::new();
@@ -1248,7 +1245,7 @@ pub fn scan_module_graph(root: &Path, dirs: &[&str]) -> ModuleGraph {
     }
 
     let mut diagnostics = Vec::new();
-    for module in &modules {
+    for module in modules {
         diagnostics.extend(module.diagnostics.iter().cloned());
         let client_leaf = !is_app_entry(&module.id)
             && importers.get(&module.id).is_some_and(|list| {
@@ -1266,10 +1263,14 @@ pub fn scan_module_graph(root: &Path, dirs: &[&str]) -> ModuleGraph {
         }
         diagnostics.extend(violations);
     }
+    diagnostics
+}
 
+/// Client references of `"use client"` modules and deduplicated server references.
+fn graph_references(modules: &[ModuleInfo]) -> (Vec<ClientReference>, Vec<ServerReference>) {
     let mut client_manifest = Vec::new();
     let mut server_manifest: Vec<ServerReference> = Vec::new();
-    for module in &modules {
+    for module in modules {
         if module.kind == ModuleKind::Client {
             let chunks = vec![chunk_name(&module.id)];
             let mut names: Vec<&str> = module
@@ -1321,12 +1322,24 @@ pub fn scan_module_graph(root: &Path, dirs: &[&str]) -> ModuleGraph {
     }
     let mut seen = BTreeSet::new();
     server_manifest.retain(|reference| seen.insert(reference.id.clone()));
+    (client_manifest, server_manifest)
+}
 
-    graph.modules = modules;
-    graph.client_manifest = client_manifest;
-    graph.server_manifest = server_manifest;
-    graph.diagnostics = diagnostics;
-    graph
+/// Scans `dirs` (relative to `root`) for `.ts/.tsx/.js/.jsx/.mjs` modules and builds the graph.
+///
+/// `node_modules` and `.d.ts` files are skipped. Client references are emitted for every export
+/// of a `"use client"` module (plus a `*` namespace entry); server references cover the exports
+/// of `"use server"` modules, hoisted inline actions and `"use cache"` functions. Hook violations
+/// are suppressed for modules that are imported exclusively by Client modules (they become client
+/// code at bundle time) unless they are App Router special files.
+pub fn scan_module_graph(root: &Path, dirs: &[&str]) -> ModuleGraph {
+    let modules: Vec<ModuleInfo> = collect_sources(root, dirs)
+        .iter()
+        .map(|(id, source)| analyze_module(source, id))
+        .collect();
+    let diagnostics = graph_diagnostics(&modules);
+    let (client_manifest, server_manifest) = graph_references(&modules);
+    ModuleGraph { root: norm(root), modules, client_manifest, server_manifest, diagnostics }
 }
 
 /// 40-hex server reference id: `hex(0x00 ++ sha256(salt + module + ':' + export)[..19])`.
@@ -1500,6 +1513,7 @@ pub fn flight_bootstrap_ts(graph: &ModuleGraph) -> String {
 }
 
 #[cfg(test)]
+#[allow(clippy::assert_is_empty)] // `assert!(x.is_empty())` reads better than typed empty arrays
 mod tests {
     use super::*;
 
@@ -1617,7 +1631,12 @@ export function Counter({ initial }: { initial: number }) {
         let source = "export default function Page() {\n  function act() {\n    \"use server\";\n  }\n  return <form action={act} />;\n}\n";
         let module = analyze_module(source, "app/x/page.tsx");
         assert_eq!(module.inline_server_actions, vec!["act"]);
-        assert!(module.diagnostics.iter().any(|d| d.code == "server-action-not-async"));
+        assert!(
+            module
+                .diagnostics
+                .iter()
+                .any(|d| d.code == "server-action-not-async")
+        );
     }
 
     #[test]
@@ -1666,15 +1685,29 @@ export function Counter({ initial }: { initial: number }) {
         let module = analyze_module(source, "app/lib/cached.ts");
         assert_eq!(module.kind, ModuleKind::Cache);
         assert_eq!(module.directive, ModuleDirective::UseCache);
-        assert!(module.diagnostics.iter().any(|d| d.code == "use-cache-not-async"));
+        assert!(
+            module
+                .diagnostics
+                .iter()
+                .any(|d| d.code == "use-cache-not-async")
+        );
     }
 
     #[test]
     fn counter_is_client_with_hooks_and_navigation() {
         let module = analyze_module(COUNTER_TSX, "app/components/Counter.tsx");
         assert_eq!(module.kind, ModuleKind::Client);
-        for hook in ["useState", "useActionState", "useOptimistic", "useTransition", "useRouter"] {
-            assert!(module.hooks.iter().any(|h| h == hook), "missing hook {hook}");
+        for hook in [
+            "useState",
+            "useActionState",
+            "useOptimistic",
+            "useTransition",
+            "useRouter",
+        ] {
+            assert!(
+                module.hooks.iter().any(|h| h == hook),
+                "missing hook {hook}"
+            );
         }
         assert!(module.next_imports.iter().any(|i| i == "next/navigation"));
         assert_eq!(module.exports, vec!["Counter"]);
@@ -1687,8 +1720,14 @@ export function Counter({ initial }: { initial: number }) {
         let module = analyze_module(source, "app/components/Bad.tsx");
         let violations = boundary_violations(&module);
         let codes: Vec<&str> = violations.iter().map(|d| d.code.as_str()).collect();
-        assert_eq!(codes, vec!["client-imports-server-only", "client-imports-server-only"]);
-        assert_eq!(violations[0].file.as_deref(), Some("app/components/Bad.tsx"));
+        assert_eq!(
+            codes,
+            vec!["client-imports-server-only", "client-imports-server-only"]
+        );
+        assert_eq!(
+            violations[0].file.as_deref(),
+            Some("app/components/Bad.tsx")
+        );
     }
 
     #[test]
@@ -1697,7 +1736,10 @@ export function Counter({ initial }: { initial: number }) {
             "import { useState } from \"react\";\nimport { useRouter } from \"next/navigation\";\nexport default function Page() { const [a] = useState(0); const r = useRouter(); return <p>{a}{String(r)}</p>; }\n",
             "app/bad/page.tsx",
         );
-        let codes: Vec<String> = boundary_violations(&server).into_iter().map(|d| d.code).collect();
+        let codes: Vec<String> = boundary_violations(&server)
+            .into_iter()
+            .map(|d| d.code)
+            .collect();
         assert!(codes.contains(&String::from("hooks-in-server-component")));
         assert!(codes.contains(&String::from("navigation-hooks-in-server-component")));
 
@@ -1705,14 +1747,20 @@ export function Counter({ initial }: { initial: number }) {
             "\"use client\";\nexport function C() { async function a() { \"use server\"; } return <form action={a} />; }\n",
             "app/components/C.tsx",
         );
-        let codes: Vec<String> = boundary_violations(&client).into_iter().map(|d| d.code).collect();
+        let codes: Vec<String> = boundary_violations(&client)
+            .into_iter()
+            .map(|d| d.code)
+            .collect();
         assert_eq!(codes, vec!["inline-action-in-client"]);
 
         let cached = analyze_module(
             "import { headers } from \"next/headers\";\nexport async function get() { \"use cache\"; return String(headers); }\n",
             "app/lib/c.ts",
         );
-        let codes: Vec<String> = boundary_violations(&cached).into_iter().map(|d| d.code).collect();
+        let codes: Vec<String> = boundary_violations(&cached)
+            .into_iter()
+            .map(|d| d.code)
+            .collect();
         assert_eq!(codes, vec!["next-request-in-use-cache"]);
     }
 
@@ -1720,7 +1768,10 @@ export function Counter({ initial }: { initial: number }) {
     fn exports_cover_specifiers_reexports_and_destructuring() {
         let source = "const a = 1, b = 2;\nexport { a, b as bee };\nexport * from \"./x\";\nexport * as ns from \"./y\";\nexport { z } from \"./z\";\nexport const { p, q: [r] } = obj;\nexport type T = string;\nexport enum E { A }\n";
         let module = analyze_module(source, "lib/exports.ts");
-        assert_eq!(module.exports, vec!["a", "bee", "*", "ns", "z", "p", "r", "E"]);
+        assert_eq!(
+            module.exports,
+            vec!["a", "bee", "*", "ns", "z", "p", "r", "E"]
+        );
         assert_eq!(module.imports, vec!["./x", "./y", "./z"]);
     }
 
@@ -1731,10 +1782,16 @@ export function Counter({ initial }: { initial: number }) {
         let c = server_reference_id("app/actions.ts", "deletePost", "");
         assert_eq!(a.len(), 40);
         assert!(a.starts_with("00"));
-        assert!(a.chars().all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase()));
+        assert!(
+            a.chars()
+                .all(|c| c.is_ascii_hexdigit() && !c.is_ascii_uppercase())
+        );
         assert_eq!(a, b);
         assert_ne!(a, c);
-        assert_ne!(a, server_reference_id("app/actions.ts", "createPost", "salt"));
+        assert_ne!(
+            a,
+            server_reference_id("app/actions.ts", "createPost", "salt")
+        );
     }
 
     fn sample_graph() -> ModuleGraph {
@@ -1797,7 +1854,10 @@ export function Counter({ initial }: { initial: number }) {
         let entry = &client["clientModules"]["app/components/Counter.tsx#Counter"];
         assert_eq!(entry["id"], "app/components/Counter.tsx");
         assert_eq!(entry["name"], "Counter");
-        assert_eq!(entry["chunks"][0], "static/chunks/app_components_Counter.js");
+        assert_eq!(
+            entry["chunks"][0],
+            "static/chunks/app_components_Counter.js"
+        );
         assert_eq!(entry["async"], false);
         assert_eq!(
             client["ssrModuleMapping"]["app/components/Counter.tsx"]["Counter"]["name"],
@@ -1816,7 +1876,10 @@ export function Counter({ initial }: { initial: number }) {
         assert_eq!(server["node"][&inline_id]["inline"], true);
         let cache_id = server_reference_id("app/lib/data.ts", "getPosts", "");
         assert_eq!(server["node"][&cache_id]["cache"], true);
-        assert_eq!(server["encryptionKey"], "${env:NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}");
+        assert_eq!(
+            server["encryptionKey"],
+            "${env:NEXT_SERVER_ACTIONS_ENCRYPTION_KEY}"
+        );
         assert!(server["edge"].is_object());
     }
 
@@ -1826,7 +1889,9 @@ export function Counter({ initial }: { initial: number }) {
         assert!(ts.starts_with("// Generated by yolo-next"));
         assert!(ts.contains("__webpack_require__"));
         assert!(ts.contains("__webpack_chunk_load__"));
-        assert!(ts.contains("\"app/components/Counter.tsx\": () => import(\"../app/components/Counter.tsx\")"));
+        assert!(ts.contains(
+            "\"app/components/Counter.tsx\": () => import(\"../app/components/Counter.tsx\")"
+        ));
         assert!(ts.contains("export const serverActionMap"));
         assert!(ts.contains("export const clientManifest"));
         assert!(ts.contains("exportName: \"createPost\""));
@@ -1845,8 +1910,11 @@ export function Counter({ initial }: { initial: number }) {
         let app = dir.join("app");
         fs::create_dir_all(app.join("components")).expect("create temp app dir");
         fs::create_dir_all(app.join("node_modules")).expect("create node_modules");
-        fs::write(app.join("node_modules").join("skip.tsx"), "\"use client\";\nexport const S = 1;\n")
-            .expect("write skipped module");
+        fs::write(
+            app.join("node_modules").join("skip.tsx"),
+            "\"use client\";\nexport const S = 1;\n",
+        )
+        .expect("write skipped module");
         fs::write(app.join("types.d.ts"), "export type X = 1;\n").expect("write d.ts");
         fs::write(app.join("components").join("Counter.tsx"), COUNTER_TSX).expect("write Counter");
         fs::write(
@@ -1886,12 +1954,19 @@ export function Counter({ initial }: { initial: number }) {
                 .iter()
                 .any(|r| r.id == "app/components/Counter.tsx#Counter")
         );
-        assert!(graph.client_manifest.iter().any(|r| r.id == "app/components/Shell.tsx#*"));
+        assert!(
+            graph
+                .client_manifest
+                .iter()
+                .any(|r| r.id == "app/components/Shell.tsx#*")
+        );
         assert!(
             graph
                 .server_manifest
                 .iter()
-                .any(|r| r.module == "app/actions.ts" && r.export_name == "createPost" && !r.inline)
+                .any(|r| r.module == "app/actions.ts"
+                    && r.export_name == "createPost"
+                    && !r.inline)
         );
         // Leaf.tsx uses hooks without a directive but is only imported by a Client module.
         assert!(
@@ -1922,7 +1997,12 @@ export function Counter({ initial }: { initial: number }) {
         assert_eq!(data.cache_functions[1].tags, vec!["posts", "post:*"]);
         let counter = find("app/components/Counter.tsx").expect("counter");
         assert_eq!(counter.kind, ModuleKind::Client);
-        assert!(graph.client_manifest.iter().any(|r| r.id == "app/components/Counter.tsx#Counter"));
+        assert!(
+            graph
+                .client_manifest
+                .iter()
+                .any(|r| r.id == "app/components/Counter.tsx#Counter")
+        );
         assert!(graph.server_manifest.iter().all(|r| r.id.len() == 40));
         assert!(
             graph
@@ -1930,6 +2010,11 @@ export function Counter({ initial }: { initial: number }) {
                 .iter()
                 .any(|r| r.export_name == "refreshNow" && r.inline)
         );
-        assert!(graph.server_manifest.iter().any(|r| r.export_name == "getPost" && r.cache));
+        assert!(
+            graph
+                .server_manifest
+                .iter()
+                .any(|r| r.export_name == "getPost" && r.cache)
+        );
     }
 }
