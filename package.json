@@ -19,7 +19,7 @@
   ],
   "scripts": {
     "check": "bun run typecheck && cargo check --workspace",
-    "typecheck": "bun x tsc --noEmit -p tsconfig.json",
+    "typecheck": "bun check",
     "test": "bun test",
     "bench": "bun run bench/bench.ts",
     "bench:baseline": "bun run bench/bench.ts --target baseline",
