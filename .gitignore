@@ -29,8 +29,8 @@ target/
 *.profraw
 
 # Bun
-/dist
 /.bun
+**/.tmp/
 
 # Benchmark
 /bench/out/*.tmp
