@@ -1,0 +1,152 @@
+{
+  "schema_version": 2,
+  "metadata": {
+    "hyperfine_version": "2.0.0",
+    "start_time": "2026-11-08T11:21:18Z",
+    "platform": {
+      "os": "Windows_NT",
+      "architecture": "x86_64"
+    }
+  },
+  "primary_metric": "time_wall_clock",
+  "results": [
+    {
+      "command": "cargo metadata --manifest-path C:/src/yolo-arena/vendor/leptos/Cargo.toml --format-version 1 --no-deps",
+      "measurements": [
+        {
+          "time_wall_clock": {
+            "value": 0.086094736,
+            "unit": "second"
+          },
+          "time_cpu": {
+            "value": 0.115625,
+            "unit": "second"
+          },
+          "time_user": {
+            "value": 0.0740625,
+            "unit": "second"
+          },
+          "time_system": {
+            "value": 0.0415625,
+            "unit": "second"
+          },
+          "exit_code": 0
+        },
+        {
+          "time_wall_clock": {
+            "value": 0.084228136,
+            "unit": "second"
+          },
+          "time_cpu": {
+            "value": 0.084375,
+            "unit": "second"
+          },
+          "time_user": {
+            "value": 0.0740625,
+            "unit": "second"
+          },
+          "time_system": {
+            "value": 0.010312499999999999,
+            "unit": "second"
+          },
+          "exit_code": 0
+        },
+        {
+          "time_wall_clock": {
+            "value": 0.088394536,
+            "unit": "second"
+          },
+          "time_cpu": {
+            "value": 0.1,
+            "unit": "second"
+          },
+          "time_user": {
+            "value": 0.0584375,
+            "unit": "second"
+          },
+          "time_system": {
+            "value": 0.0415625,
+            "unit": "second"
+          },
+          "exit_code": 0
+        },
+        {
+          "time_wall_clock": {
+            "value": 0.087833836,
+            "unit": "second"
+          },
+          "time_cpu": {
+            "value": 0.115625,
+            "unit": "second"
+          },
+          "time_user": {
+            "value": 0.0584375,
+            "unit": "second"
+          },
+          "time_system": {
+            "value": 0.0571875,
+            "unit": "second"
+          },
+          "exit_code": 0
+        },
+        {
+          "time_wall_clock": {
+            "value": 0.087014936,
+            "unit": "second"
+          },
+          "time_cpu": {
+            "value": 0.084375,
+            "unit": "second"
+          },
+          "time_user": {
+            "value": 0.0271875,
+            "unit": "second"
+          },
+          "time_system": {
+            "value": 0.0571875,
+            "unit": "second"
+          },
+          "exit_code": 0
+        }
+      ],
+      "summary": {
+        "time_cpu": {
+          "unit": "second",
+          "count": 5,
+          "mean": 0.1,
+          "stddev": 0.015625,
+          "median": 0.1,
+          "min": 0.084375,
+          "max": 0.115625
+        },
+        "time_system": {
+          "unit": "second",
+          "count": 5,
+          "mean": 0.0415625,
+          "stddev": 0.019136638615493577,
+          "median": 0.0415625,
+          "min": 0.010312499999999999,
+          "max": 0.0571875
+        },
+        "time_user": {
+          "unit": "second",
+          "count": 5,
+          "mean": 0.058437499999999996,
+          "stddev": 0.01913663861549358,
+          "median": 0.0584375,
+          "min": 0.0271875,
+          "max": 0.0740625
+        },
+        "time_wall_clock": {
+          "unit": "second",
+          "count": 5,
+          "mean": 0.086713236,
+          "stddev": 0.001637971397796677,
+          "median": 0.087014936,
+          "min": 0.084228136,
+          "max": 0.088394536
+        }
+      }
+    }
+  ]
+}

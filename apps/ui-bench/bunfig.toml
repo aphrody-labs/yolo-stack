@@ -1,5 +1,0 @@
-[serve.static]
-plugins = ["bun-plugin-tailwind"]
-
-[install]
-exact = true

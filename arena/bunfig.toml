@@ -1,0 +1,3 @@
+[test]
+# Exclude third-party vendor directories from root test scanning
+root = "tests"

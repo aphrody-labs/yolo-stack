@@ -1,0 +1,17 @@
+{
+  "name": "yolo-arena",
+  "version": "1.0.0",
+  "description": "YOLO 2026 Sovereign Benchmarking and Arena Engine",
+  "type": "module",
+  "scripts": {
+    "arena": "bun run src/cli.ts",
+    "arena:shells": "bun run src/cli.ts --suite shells",
+    "arena:browsers": "bun run src/cli.ts --suite browsers",
+    "arena:gui": "bun run src/cli.ts --suite gui",
+    "arena:runtimes": "bun run src/cli.ts --suite runtimes",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "mitata": "^1.0.34"
+  }
+}

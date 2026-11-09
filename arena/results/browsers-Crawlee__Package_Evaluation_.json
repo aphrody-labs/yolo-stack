@@ -1,0 +1,152 @@
+{
+  "schema_version": 2,
+  "metadata": {
+    "hyperfine_version": "2.0.0",
+    "start_time": "2026-11-08T11:20:33Z",
+    "platform": {
+      "os": "Windows_NT",
+      "architecture": "x86_64"
+    }
+  },
+  "primary_metric": "time_wall_clock",
+  "results": [
+    {
+      "command": "node -e \"require('C:/src/yolo-arena/vendor/crawlee/package.json')\"",
+      "measurements": [
+        {
+          "time_wall_clock": {
+            "value": 0.027105242,
+            "unit": "second"
+          },
+          "time_cpu": {
+            "value": 0.026250000000000002,
+            "unit": "second"
+          },
+          "time_user": {
+            "value": 0.0121875,
+            "unit": "second"
+          },
+          "time_system": {
+            "value": 0.0140625,
+            "unit": "second"
+          },
+          "exit_code": 0
+        },
+        {
+          "time_wall_clock": {
+            "value": 0.030110342000000005,
+            "unit": "second"
+          },
+          "time_cpu": {
+            "value": 0.057499999999999996,
+            "unit": "second"
+          },
+          "time_user": {
+            "value": 0.0434375,
+            "unit": "second"
+          },
+          "time_system": {
+            "value": 0.0140625,
+            "unit": "second"
+          },
+          "exit_code": 0
+        },
+        {
+          "time_wall_clock": {
+            "value": 0.027616842000000003,
+            "unit": "second"
+          },
+          "time_cpu": {
+            "value": 0.0296875,
+            "unit": "second"
+          },
+          "time_user": {
+            "value": 0.0,
+            "unit": "second"
+          },
+          "time_system": {
+            "value": 0.0296875,
+            "unit": "second"
+          },
+          "exit_code": 0
+        },
+        {
+          "time_wall_clock": {
+            "value": 0.025617542,
+            "unit": "second"
+          },
+          "time_cpu": {
+            "value": 0.026250000000000002,
+            "unit": "second"
+          },
+          "time_user": {
+            "value": 0.0121875,
+            "unit": "second"
+          },
+          "time_system": {
+            "value": 0.0140625,
+            "unit": "second"
+          },
+          "exit_code": 0
+        },
+        {
+          "time_wall_clock": {
+            "value": 0.027186342000000002,
+            "unit": "second"
+          },
+          "time_cpu": {
+            "value": 0.026250000000000002,
+            "unit": "second"
+          },
+          "time_user": {
+            "value": 0.0121875,
+            "unit": "second"
+          },
+          "time_system": {
+            "value": 0.0140625,
+            "unit": "second"
+          },
+          "exit_code": 0
+        }
+      ],
+      "summary": {
+        "time_cpu": {
+          "unit": "second",
+          "count": 5,
+          "mean": 0.033187499999999995,
+          "stddev": 0.013672366062609643,
+          "median": 0.026250000000000002,
+          "min": 0.026250000000000002,
+          "max": 0.057499999999999996
+        },
+        "time_system": {
+          "unit": "second",
+          "count": 5,
+          "mean": 0.0171875,
+          "stddev": 0.006987712429686842,
+          "median": 0.0140625,
+          "min": 0.0140625,
+          "max": 0.0296875
+        },
+        "time_user": {
+          "unit": "second",
+          "count": 5,
+          "mean": 0.016,
+          "stddev": 0.016220526155152917,
+          "median": 0.0121875,
+          "min": 0.0,
+          "max": 0.0434375
+        },
+        "time_wall_clock": {
+          "unit": "second",
+          "count": 5,
+          "mean": 0.027527262000000004,
+          "stddev": 0.001629546307105142,
+          "median": 0.027186342000000002,
+          "min": 0.025617542,
+          "max": 0.030110342000000005
+        }
+      }
+    }
+  ]
+}

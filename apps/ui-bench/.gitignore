@@ -1,6 +1,0 @@
-.kits
-node_modules/
-dist/
-lane-leptos/target/
-lane-bun/*/node_modules
-results/tmp/
