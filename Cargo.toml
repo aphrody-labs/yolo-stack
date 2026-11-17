@@ -4,10 +4,6 @@
 [workspace]
 resolver = "3"
 members = [
-    "crates/yolo-stack-routes",
-    "crates/yolo-stack-studio",
-    "crates/yolo-next",
-    "crates/yolo-stack-theme",
     "pillars/yolo-ui/crates/yolo-ui-color",
     "pillars/*/crates/*",
 ]
@@ -30,16 +26,7 @@ authors = ["aphrody-dev <contact@aphrody.com>"]
 
 [workspace.dependencies]
 # Crates internes
-yolo-stack-routes = { path = "crates/yolo-stack-routes" }
 yolo-ui-color = { path = "pillars/yolo-ui/crates/yolo-ui-color" }
-
-# Crates yolo-ui consommees par chemin (checkout voisin) jusqu'a la fusion du pilier.
-yolo-theme-pack = { path = "../yolo-ui/crates/yolo-theme-pack" }
-yolo-tokens = { path = "../yolo-ui/crates/yolo-tokens", default-features = false }
-yolo-layout = { path = "../yolo-ui/crates/yolo-layout", default-features = false }
-yolo-shared = { path = "../yolo-ui/crates/yolo-shared" }
-yolo-craft = { path = "../yolo-ui/crates/yolo-craft" }
-yolo-storyteller = { path = "../yolo-ui/crates/yolo-storyteller" }
 
 # UI -- versions crates.io verifiees le 2026-11-04 avec `cargo search <crate> --limit 1`.
 dioxus = "0.8.0-alpha.3"
