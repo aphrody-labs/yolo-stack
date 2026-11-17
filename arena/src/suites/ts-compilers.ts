@@ -1,5 +1,6 @@
 import { runHyperfineBenchmark, type ArenaBenchmarkResult } from "../engine.ts";
 import { existsSync, writeFileSync } from "fs";
+import { ARENA_ROOT } from "../paths.ts";
 
 export interface TsCompilerEvaluation {
   name: string;
@@ -50,7 +51,7 @@ export async function runTsCompilersBenchmarks(): Promise<ArenaBenchmarkResult[]
   const results: ArenaBenchmarkResult[] = [];
 
   // Création d'un fichier source TS représentatif pour le benchmark
-  const testTsFile = "C:/src/yolo-arena/results/benchmark_target.ts";
+  const testTsFile = `${ARENA_ROOT}/results/benchmark_target.ts`;
   writeFileSync(testTsFile, `
 export interface User {
   id: string;
@@ -72,7 +73,7 @@ export const users: User[] = Array.from({ length: 1000 }, (_, i) => ({
     await runHyperfineBenchmark(
       "ts-compilers",
       "Bun (Rust Native TS Transpiler)",
-      `bun build ${testTsFile} --outfile C:/src/yolo-arena/results/out-bun.js`,
+      `bun build ${testTsFile} --outfile ${ARENA_ROOT}/results/out-bun.js`,
       10,
       2
     )
@@ -83,7 +84,7 @@ export const users: User[] = Array.from({ length: 1000 }, (_, i) => ({
     await runHyperfineBenchmark(
       "ts-compilers",
       "Bun AOT Compile (Standalone Executable)",
-      `bun build ${testTsFile} --compile --outfile C:/src/yolo-arena/results/out-bun.exe`,
+      `bun build ${testTsFile} --compile --outfile ${ARENA_ROOT}/results/out-bun.exe`,
       5,
       1
     )
@@ -94,7 +95,7 @@ export const users: User[] = Array.from({ length: 1000 }, (_, i) => ({
     await runHyperfineBenchmark(
       "ts-compilers",
       "esbuild (Go Native Bundler/Compiler)",
-      `esbuild ${testTsFile} --outfile=C:/src/yolo-arena/results/out-esbuild.js`,
+      `esbuild ${testTsFile} --outfile=${ARENA_ROOT}/results/out-esbuild.js`,
       10,
       2
     )
@@ -116,7 +117,7 @@ export const users: User[] = Array.from({ length: 1000 }, (_, i) => ({
     await runHyperfineBenchmark(
       "ts-compilers",
       "swc (Rust Compiler)",
-      `swc ${testTsFile} -o C:/src/yolo-arena/results/out-swc.js`,
+      `swc ${testTsFile} -o ${ARENA_ROOT}/results/out-swc.js`,
       10,
       2
     )

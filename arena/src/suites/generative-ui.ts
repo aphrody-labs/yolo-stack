@@ -1,5 +1,6 @@
 import { runHyperfineBenchmark, type ArenaBenchmarkResult } from "../engine.ts";
 import { existsSync } from "fs";
+import { ARENA_ROOT } from "../paths.ts";
 
 export interface GenerativeUiEvaluation {
   name: string;
@@ -42,12 +43,12 @@ export async function runGenerativeUiBenchmarks(): Promise<ArenaBenchmarkResult[
   const results: ArenaBenchmarkResult[] = [];
 
   // 1. CopilotKit Package Inspection
-  if (existsSync("C:/src/yolo-arena/vendor/copilotkit/package.json")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/copilotkit/package.json`)) {
     results.push(
       await runHyperfineBenchmark(
         "generative-ui",
         "CopilotKit (AG-UI Engine Init)",
-        "node -e \"require('C:/src/yolo-arena/vendor/copilotkit/package.json')\"",
+        `node -e \"require('${ARENA_ROOT}/vendor/copilotkit/package.json')\"`,
         5,
         1
       )
@@ -55,12 +56,12 @@ export async function runGenerativeUiBenchmarks(): Promise<ArenaBenchmarkResult[
   }
 
   // 2. a2ui Package Inspection
-  if (existsSync("C:/src/yolo-arena/vendor/a2ui/package.json")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/a2ui/package.json`)) {
     results.push(
       await runHyperfineBenchmark(
         "generative-ui",
         "a2ui (Multi-Framework Layout Parser)",
-        "node -e \"require('C:/src/yolo-arena/vendor/a2ui/package.json')\"",
+        `node -e \"require('${ARENA_ROOT}/vendor/a2ui/package.json')\"`,
         5,
         1
       )
@@ -68,7 +69,7 @@ export async function runGenerativeUiBenchmarks(): Promise<ArenaBenchmarkResult[
   }
 
   // 3. OpenUI Inspection
-  if (existsSync("C:/src/yolo-arena/vendor/openui")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/openui`)) {
     results.push(
       await runHyperfineBenchmark(
         "generative-ui",

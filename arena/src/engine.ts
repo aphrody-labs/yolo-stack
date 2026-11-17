@@ -1,5 +1,6 @@
 import { $ } from "bun";
 import { existsSync } from "fs";
+import { ARENA_ROOT } from "./paths.ts";
 
 export interface ArenaBenchmarkResult {
   suite: string;
@@ -37,14 +38,14 @@ export async function runHyperfineBenchmark(
       jsonPath,
       command,
     ], {
-      cwd: "C:/src/yolo-arena",
+      cwd: `${ARENA_ROOT}`,
       stdout: "pipe",
       stderr: "pipe",
     });
 
     const exitCode = await proc.exited;
-    if (exitCode === 0 && existsSync(`C:/src/yolo-arena/${jsonPath}`)) {
-      const data = await Bun.file(`C:/src/yolo-arena/${jsonPath}`).json();
+    if (exitCode === 0 && existsSync(`${ARENA_ROOT}/${jsonPath}`)) {
+      const data = await Bun.file(`${ARENA_ROOT}/${jsonPath}`).json();
       const res = data.results[0];
       return {
         suite,

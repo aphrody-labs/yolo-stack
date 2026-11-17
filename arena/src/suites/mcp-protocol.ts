@@ -1,5 +1,6 @@
 import { runHyperfineBenchmark, type ArenaBenchmarkResult } from "../engine.ts";
 import { existsSync } from "fs";
+import { ARENA_ROOT } from "../paths.ts";
 
 export interface McpOfficialEvaluation {
   name: string;
@@ -49,12 +50,12 @@ export async function runMcpOfficialBenchmarks(): Promise<ArenaBenchmarkResult[]
   const results: ArenaBenchmarkResult[] = [];
 
   // 1. MCP TypeScript SDK Inspection
-  if (existsSync("C:/src/yolo-arena/vendor/mcp-typescript-sdk/package.json")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/mcp-typescript-sdk/package.json`)) {
     results.push(
       await runHyperfineBenchmark(
         "mcp-protocol",
         "mcp-typescript-sdk (Core Init)",
-        "node -e \"require('C:/src/yolo-arena/vendor/mcp-typescript-sdk/package.json')\"",
+        `node -e \"require('${ARENA_ROOT}/vendor/mcp-typescript-sdk/package.json')\"`,
         5,
         1
       )
@@ -62,12 +63,12 @@ export async function runMcpOfficialBenchmarks(): Promise<ArenaBenchmarkResult[]
   }
 
   // 2. MCP Servers Inspection
-  if (existsSync("C:/src/yolo-arena/vendor/mcp-servers/package.json")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/mcp-servers/package.json`)) {
     results.push(
       await runHyperfineBenchmark(
         "mcp-protocol",
         "mcp-servers (Monorepo Catalog Init)",
-        "node -e \"require('C:/src/yolo-arena/vendor/mcp-servers/package.json')\"",
+        `node -e \"require('${ARENA_ROOT}/vendor/mcp-servers/package.json')\"`,
         5,
         1
       )
@@ -75,12 +76,12 @@ export async function runMcpOfficialBenchmarks(): Promise<ArenaBenchmarkResult[]
   }
 
   // 3. MCP Inspector Inspection
-  if (existsSync("C:/src/yolo-arena/vendor/mcp-inspector/package.json")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/mcp-inspector/package.json`)) {
     results.push(
       await runHyperfineBenchmark(
         "mcp-protocol",
         "mcp-inspector (Visual Debugger Init)",
-        "node -e \"require('C:/src/yolo-arena/vendor/mcp-inspector/package.json')\"",
+        `node -e \"require('${ARENA_ROOT}/vendor/mcp-inspector/package.json')\"`,
         5,
         1
       )
@@ -88,7 +89,7 @@ export async function runMcpOfficialBenchmarks(): Promise<ArenaBenchmarkResult[]
   }
 
   // 4. MCP Python SDK Inspection
-  if (existsSync("C:/src/yolo-arena/vendor/mcp-python-sdk")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/mcp-python-sdk`)) {
     results.push(
       await runHyperfineBenchmark(
         "mcp-protocol",

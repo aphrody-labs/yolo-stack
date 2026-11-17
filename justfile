@@ -49,7 +49,7 @@ bench:
     if [ -f bench/bench.ts ]; then bun run bench/bench.ts; else echo "aucun bench bun"; fi
 
 # Fusionne un depot pilier existant dans pillars/NAME via git subtree (historique ecrase).
-# Exemple : just merge-pillar yolo-ui C:/src/yolo-ui
+# Exemple : just merge-pillar yolo-ui https://github.com/yolo-rs/yolo-ui.git
 merge-pillar NAME URL BRANCH="main":
     test ! -e "pillars/{{NAME}}/.git" || { echo "pillars/{{NAME}} est deja un depot"; exit 1; }
     git subtree add --prefix "pillars/{{NAME}}" "{{URL}}" "{{BRANCH}}" --squash

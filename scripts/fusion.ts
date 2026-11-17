@@ -15,6 +15,7 @@ import { join, resolve } from "node:path";
 
 export interface FusionRepo {
   readonly name: string;
+  /** Optional sibling checkout, resolved from the environment by `siblingDir`; empty when absent. */
   readonly local: string;
   readonly remote: string;
   readonly role: string;
@@ -35,6 +36,14 @@ export interface FusionManifest {
 
 export const STACK_ROOT = resolve(import.meta.dir, "..");
 
+/** Sibling checkout of a fleet repository: `YOLO_STACK_<NAME>_DIR`, else `YOLO_STACK_SIBLINGS_DIR/<name>`, else "" (feature skipped). */
+export function siblingDir(name: string): string {
+  const env = process.env[`YOLO_STACK_${name.toUpperCase().replaceAll("-", "_")}_DIR`];
+  if (env) return resolve(env);
+  const base = process.env.YOLO_STACK_SIBLINGS_DIR;
+  return base ? resolve(base, name) : "";
+}
+
 export async function loadFusionManifest(
   root: string = STACK_ROOT,
 ): Promise<FusionManifest> {
@@ -43,7 +52,10 @@ export async function loadFusionManifest(
   if (!parsed.fusion || !Array.isArray(parsed.repo)) {
     throw new Error("fusion.toml: expected [fusion] table and [[repo]] entries");
   }
-  return parsed;
+  return {
+    ...parsed,
+    repo: parsed.repo.map((r) => ({ ...r, local: r.local || siblingDir(r.name) })),
+  };
 }
 
 export type MountState = "missing" | "link" | "directory" | "submodule";
@@ -115,7 +127,7 @@ export async function fusionStatus(
   );
   const out: RepoStatus[] = [];
   for (const repo of selected) {
-    const exists = existsSync(repo.local);
+    const exists = repo.local !== "" && existsSync(repo.local);
     const base: RepoStatus = {
       name: repo.name,
       local: repo.local,
@@ -170,7 +182,7 @@ export async function fusionLink(
   const linked: string[] = [];
   for (const repo of manifest.repo) {
     if (names.length > 0 && !names.includes(repo.name)) continue;
-    if (!existsSync(repo.local)) continue;
+    if (!repo.local || !existsSync(repo.local)) continue;
     if (mountState(root, manifest, repo.name) !== "missing") continue;
     await createLink(repo.local, join(mountDir, repo.name));
     linked.push(repo.name);
@@ -212,7 +224,7 @@ export async function fusionPlan(root: string = STACK_ROOT): Promise<FusionPlan>
     repos.push({
       name: repo.name,
       mode: manifest.fusion.default_mode,
-      present: existsSync(repo.local),
+      present: repo.local !== "" && existsSync(repo.local),
     });
     for (const member of repo.cargo_members) {
       cargoMembers.push(`${manifest.fusion.mount_dir}/${repo.name}/${member}`);
@@ -287,8 +299,7 @@ export async function fusionDoctor(
   for (const repo of manifest.repo) {
     if (names.has(repo.name)) findings.push(`duplicate repo name: ${repo.name}`);
     names.add(repo.name);
-    if (!repo.local) findings.push(`${repo.name}: missing local path`);
-    else if (!existsSync(repo.local)) {
+    if (repo.local && !existsSync(repo.local)) {
       findings.push(`${repo.name}: local checkout not found at ${repo.local}`);
     }
   }

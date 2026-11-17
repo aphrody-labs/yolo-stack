@@ -1,5 +1,6 @@
 import { runHyperfineBenchmark, type ArenaBenchmarkResult } from "../engine.ts";
 import { existsSync } from "fs";
+import { ARENA_ROOT, pillarDir } from "../paths.ts";
 
 export interface GraphicsStackEvaluation {
   name: string;
@@ -78,12 +79,12 @@ export async function runGraphicsBenchmarks(): Promise<ArenaBenchmarkResult[]> {
   console.log("==========================================\n");
 
   // 1. PixiJS Module Import & Initialization Benchmark
-  if (existsSync("C:/src/yolo-arena/vendor/pixijs/package.json")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/pixijs/package.json`)) {
     results.push(
       await runHyperfineBenchmark(
         "graphics",
         "PixiJS v8 (Node Init)",
-        "node -e \"require('C:/src/yolo-arena/vendor/pixijs/package.json')\"",
+        `node -e \"require('${ARENA_ROOT}/vendor/pixijs/package.json')\"`,
         5,
         1
       )
@@ -91,12 +92,12 @@ export async function runGraphicsBenchmarks(): Promise<ArenaBenchmarkResult[]> {
   }
 
   // 2. Phaser Core Import Benchmark
-  if (existsSync("C:/src/yolo-arena/vendor/phaser/package.json")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/phaser/package.json`)) {
     results.push(
       await runHyperfineBenchmark(
         "graphics",
         "Phaser 3 (Node Init)",
-        "node -e \"require('C:/src/yolo-arena/vendor/phaser/package.json')\"",
+        `node -e \"require('${ARENA_ROOT}/vendor/phaser/package.json')\"`,
         5,
         1
       )
@@ -104,12 +105,12 @@ export async function runGraphicsBenchmarks(): Promise<ArenaBenchmarkResult[]> {
   }
 
   // 3. Three.js Import Benchmark
-  if (existsSync("C:/src/yolo-arena/vendor/threejs/package.json")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/threejs/package.json`)) {
     results.push(
       await runHyperfineBenchmark(
         "graphics",
         "Three.js (Node Init)",
-        "node -e \"require('C:/src/yolo-arena/vendor/threejs/package.json')\"",
+        `node -e \"require('${ARENA_ROOT}/vendor/threejs/package.json')\"`,
         5,
         1
       )
@@ -117,12 +118,12 @@ export async function runGraphicsBenchmarks(): Promise<ArenaBenchmarkResult[]> {
   }
 
   // 4. Babylon.js Import Benchmark
-  if (existsSync("C:/src/yolo-arena/vendor/babylonjs/package.json")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/babylonjs/package.json`)) {
     results.push(
       await runHyperfineBenchmark(
         "graphics",
         "Babylon.js (Node Init)",
-        "node -e \"require('C:/src/yolo-arena/vendor/babylonjs/package.json')\"",
+        `node -e \"require('${ARENA_ROOT}/vendor/babylonjs/package.json')\"`,
         5,
         1
       )
@@ -130,12 +131,12 @@ export async function runGraphicsBenchmarks(): Promise<ArenaBenchmarkResult[]> {
   }
 
   // 5. wgpu native Rust workspace check
-  if (existsSync("C:/src/yolo-arena/vendor/wgpu/Cargo.toml")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/wgpu/Cargo.toml`)) {
     results.push(
       await runHyperfineBenchmark(
         "graphics",
         "wgpu Native Rust (Cargo Metadata Eval)",
-        "cargo metadata --manifest-path C:/src/yolo-arena/vendor/wgpu/Cargo.toml --format-version 1 --no-deps",
+        `cargo metadata --manifest-path ${ARENA_ROOT}/vendor/wgpu/Cargo.toml --format-version 1 --no-deps`,
         5,
         1
       )
@@ -143,12 +144,12 @@ export async function runGraphicsBenchmarks(): Promise<ArenaBenchmarkResult[]> {
   }
 
   // 6. Bevy Engine Rust workspace check
-  if (existsSync("C:/src/yolo-arena/vendor/bevy/Cargo.toml")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/bevy/Cargo.toml`)) {
     results.push(
       await runHyperfineBenchmark(
         "graphics",
         "Bevy Engine (Cargo Metadata Eval)",
-        "cargo metadata --manifest-path C:/src/yolo-arena/vendor/bevy/Cargo.toml --format-version 1 --no-deps",
+        `cargo metadata --manifest-path ${ARENA_ROOT}/vendor/bevy/Cargo.toml --format-version 1 --no-deps`,
         5,
         1
       )
@@ -156,12 +157,13 @@ export async function runGraphicsBenchmarks(): Promise<ArenaBenchmarkResult[]> {
   }
 
   // 7. Yolo Render (Native 2D/3D Rasterizer)
-  if (existsSync("C:/src/yolo-ui/crates/yolo-render/Cargo.toml")) {
+  const ui = pillarDir("yolo-ui");
+  if (ui && existsSync(`${ui}/crates/yolo-render/Cargo.toml`)) {
     results.push(
       await runHyperfineBenchmark(
         "graphics",
         "Yolo Render Native (Cargo Check)",
-        "cargo check --manifest-path C:/src/yolo-ui/crates/yolo-render/Cargo.toml",
+        `cargo check --manifest-path ${ui}/crates/yolo-render/Cargo.toml`,
         3,
         1
       )

@@ -1,5 +1,6 @@
 import { runHyperfineBenchmark, type ArenaBenchmarkResult } from "../engine.ts";
 import { existsSync } from "fs";
+import { ARENA_ROOT } from "../paths.ts";
 
 export interface GameAgentEvaluation {
   name: string;
@@ -42,7 +43,7 @@ export async function runGameAgentsBenchmarks(): Promise<ArenaBenchmarkResult[]>
   const results: ArenaBenchmarkResult[] = [];
 
   // 1. Voyager Python / Node Environment Check
-  if (existsSync("C:/src/yolo-arena/vendor/voyager")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/voyager`)) {
     results.push(
       await runHyperfineBenchmark(
         "game-agents",
@@ -55,7 +56,7 @@ export async function runGameAgentsBenchmarks(): Promise<ArenaBenchmarkResult[]>
   }
 
   // 2. AI Diplomacy Check
-  if (existsSync("C:/src/yolo-arena/vendor/ai-diplomacy")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/ai-diplomacy`)) {
     results.push(
       await runHyperfineBenchmark(
         "game-agents",
@@ -68,12 +69,12 @@ export async function runGameAgentsBenchmarks(): Promise<ArenaBenchmarkResult[]>
   }
 
   // 3. civ6-mcp Node Check
-  if (existsSync("C:/src/yolo-arena/vendor/civ6-mcp/package.json")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/civ6-mcp/package.json`)) {
     results.push(
       await runHyperfineBenchmark(
         "game-agents",
         "civ6-mcp (Civilization VI MCP Protocol Server)",
-        "node -e \"require('C:/src/yolo-arena/vendor/civ6-mcp/package.json')\"",
+        `node -e \"require('${ARENA_ROOT}/vendor/civ6-mcp/package.json')\"`,
         5,
         1
       )

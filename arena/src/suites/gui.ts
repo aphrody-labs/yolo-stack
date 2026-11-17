@@ -13,7 +13,7 @@ export const GUI_SPEC_CATALOG: GuiBenchmarkMetric[] = [
     name: "taffy_obscura_layout",
     category: "Pure Layout",
     source: "measured_local",
-    provenance: "C:/src/yolo-web/crates/taffy (bun_browser_layout flexbox/grid tree benchmark)",
+    provenance: "yolo-web crates/taffy (bun_browser_layout flexbox/grid tree benchmark)",
     notes: "0.12ms pour 1000 nœuds de layout pur en mémoire C ABI sans fenêtre native."
   },
   {

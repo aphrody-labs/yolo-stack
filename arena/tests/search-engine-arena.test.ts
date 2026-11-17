@@ -1,8 +1,15 @@
 import { describe, expect, it } from 'bun:test';
-import { SovereignSearchEngine } from '../../yolo-web/packages/search-core/src/engine.ts';
+import { existsSync } from 'node:fs';
+import { pillarDir } from '../src/paths.ts';
 
-describe('YOLO-Arena Suite: Sovereign Search Multi-Provider Benchmark', () => {
-  const engine = new SovereignSearchEngine();
+// The search engine lives in the yolo-web pillar (pillars/yolo-web or YOLO_STACK_YOLO_WEB_DIR); the suite is skipped without it.
+const web = pillarDir('yolo-web');
+const enginePath = `${web}/packages/search-core/src/engine.ts`;
+const available = web !== undefined && existsSync(enginePath);
+const { SovereignSearchEngine } = available ? await import(enginePath) : { SovereignSearchEngine: class {} };
+
+describe.skipIf(!available)('YOLO-Arena Suite: Sovereign Search Multi-Provider Benchmark', () => {
+  const engine = new SovereignSearchEngine() as any;
 
   it('measures sub-millisecond local SQLite doc lookup speed', () => {
     const start = performance.now();

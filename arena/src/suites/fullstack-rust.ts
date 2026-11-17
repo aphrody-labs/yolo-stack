@@ -1,5 +1,6 @@
 import { runHyperfineBenchmark, type ArenaBenchmarkResult } from "../engine.ts";
 import { existsSync } from "fs";
+import { ARENA_ROOT } from "../paths.ts";
 
 export interface FullStackRustEvaluation {
   name: string;
@@ -44,12 +45,12 @@ export async function runFullStackRustBenchmarks(): Promise<ArenaBenchmarkResult
   const results: ArenaBenchmarkResult[] = [];
 
   // 1. Dioxus Workspace Evaluation
-  if (existsSync("C:/src/yolo-arena/vendor/dioxus/Cargo.toml")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/dioxus/Cargo.toml`)) {
     results.push(
       await runHyperfineBenchmark(
         "fullstack-rust",
         "Dioxus Fullstack Workspace (Cargo Metadata)",
-        "cargo metadata --manifest-path C:/src/yolo-arena/vendor/dioxus/Cargo.toml --format-version 1 --no-deps",
+        `cargo metadata --manifest-path ${ARENA_ROOT}/vendor/dioxus/Cargo.toml --format-version 1 --no-deps`,
         5,
         1
       )
@@ -57,12 +58,12 @@ export async function runFullStackRustBenchmarks(): Promise<ArenaBenchmarkResult
   }
 
   // 2. Leptos Workspace Evaluation
-  if (existsSync("C:/src/yolo-arena/vendor/leptos/Cargo.toml")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/leptos/Cargo.toml`)) {
     results.push(
       await runHyperfineBenchmark(
         "fullstack-rust",
         "Leptos Reactive SSR Workspace (Cargo Metadata)",
-        "cargo metadata --manifest-path C:/src/yolo-arena/vendor/leptos/Cargo.toml --format-version 1 --no-deps",
+        `cargo metadata --manifest-path ${ARENA_ROOT}/vendor/leptos/Cargo.toml --format-version 1 --no-deps`,
         5,
         1
       )
@@ -70,12 +71,12 @@ export async function runFullStackRustBenchmarks(): Promise<ArenaBenchmarkResult
   }
 
   // 3. Tauri v2 Workspace Evaluation
-  if (existsSync("C:/src/yolo-arena/vendor/tauri/Cargo.toml")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/tauri/Cargo.toml`)) {
     results.push(
       await runHyperfineBenchmark(
         "fullstack-rust",
         "Tauri v2 Core Workspace (Cargo Metadata)",
-        "cargo metadata --manifest-path C:/src/yolo-arena/vendor/tauri/Cargo.toml --format-version 1 --no-deps",
+        `cargo metadata --manifest-path ${ARENA_ROOT}/vendor/tauri/Cargo.toml --format-version 1 --no-deps`,
         5,
         1
       )
@@ -83,12 +84,12 @@ export async function runFullStackRustBenchmarks(): Promise<ArenaBenchmarkResult
   }
 
   // 4. Loco.rs Framework Evaluation
-  if (existsSync("C:/src/yolo-arena/vendor/loco/Cargo.toml")) {
+  if (existsSync(`${ARENA_ROOT}/vendor/loco/Cargo.toml`)) {
     results.push(
       await runHyperfineBenchmark(
         "fullstack-rust",
         "Loco.rs MVC Framework (Cargo Metadata)",
-        "cargo metadata --manifest-path C:/src/yolo-arena/vendor/loco/Cargo.toml --format-version 1 --no-deps",
+        `cargo metadata --manifest-path ${ARENA_ROOT}/vendor/loco/Cargo.toml --format-version 1 --no-deps`,
         5,
         1
       )

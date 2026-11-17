@@ -11,14 +11,15 @@ import { runTsCompilersBenchmarks } from "./suites/ts-compilers.ts";
 import { runFullStackRustBenchmarks } from "./suites/fullstack-rust.ts";
 import { generateMarkdownReport } from "./reporter.ts";
 import { existsSync, mkdirSync } from "fs";
+import { ARENA_ROOT } from "./paths.ts";
 
 async function main() {
   const args = process.argv.slice(2);
   const suiteArg = args.find((a, i) => args[i - 1] === "--suite" || a.startsWith("--suite="))?.split("=")[1] || "all";
 
   console.log(`[yolo-arena] Initializing Arena Engine 2026. Target suite: ${suiteArg}`);
-  if (!existsSync("C:/src/yolo-arena/results")) {
-    mkdirSync("C:/src/yolo-arena/results", { recursive: true });
+  if (!existsSync(`${ARENA_ROOT}/results`)) {
+    mkdirSync(`${ARENA_ROOT}/results`, { recursive: true });
   }
 
   const allResults = [];
@@ -79,7 +80,7 @@ async function main() {
   }
 
   const report = generateMarkdownReport(allResults);
-  const reportPath = "C:/src/yolo-arena/ARENA_REPORT_2026.md";
+  const reportPath = `${ARENA_ROOT}/ARENA_REPORT_2026.md`;
   await Bun.write(reportPath, report);
 
   console.log(`[yolo-arena] Scientific benchmark report successfully written to ${reportPath}`);
